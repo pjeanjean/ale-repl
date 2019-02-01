@@ -13,6 +13,11 @@ public class Application implements IApplication {
 	public Object start(IApplicationContext context) throws Exception {
 		String args[] = (String[]) context.getArguments().get("application.args");
 		
+		if (args.length != 3) {
+			System.err.println("Expecting 3 parameters: <path_to_ecore_file> <path_to_ale_file> <xtext_extension>");
+			return null;
+		}
+		
 		REPLInterpreter repl = new REPLInterpreter(args[0], args[1], args[2]);
 		
 		Scanner scanner = new Scanner(System.in);
