@@ -30,7 +30,11 @@ public class Application implements IApplication {
 				break;
 			}
 		
-			repl.interpret(read);
+			if (repl.interpret(read)) {
+				System.out.println(repl.getOutput());
+			} else {
+				System.err.println(repl.getErrors());
+			}
 		}
 		scanner.close();
 		

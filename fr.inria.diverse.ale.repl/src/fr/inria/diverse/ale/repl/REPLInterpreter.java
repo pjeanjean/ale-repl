@@ -1,7 +1,9 @@
 package fr.inria.diverse.ale.repl;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -11,22 +13,15 @@ import org.eclipse.emf.common.util.BasicMonitor;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.compare.Comparison;
 import org.eclipse.emf.compare.Diff;
-import org.eclipse.emf.compare.DifferenceKind;
-import org.eclipse.emf.compare.DifferenceSource;
 import org.eclipse.emf.compare.EMFCompare;
-import org.eclipse.emf.compare.Match;
-import org.eclipse.emf.compare.diff.DefaultDiffEngine;
-import org.eclipse.emf.compare.diff.DiffBuilder;
-import org.eclipse.emf.compare.diff.IDiffEngine;
-import org.eclipse.emf.compare.diff.IDiffProcessor;
 import org.eclipse.emf.compare.merge.BatchMerger;
 import org.eclipse.emf.compare.merge.IBatchMerger;
 import org.eclipse.emf.compare.merge.IMerger;
 import org.eclipse.emf.compare.scope.DefaultComparisonScope;
 import org.eclipse.emf.compare.scope.IComparisonScope;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.Resource.Diagnostic;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecoretools.ale.ALEInterpreter;
 import org.eclipse.emf.ecoretools.ale.core.parser.Dsl;
@@ -45,6 +40,11 @@ public class REPLInterpreter {
 	
 	private ALEInterpreter interpreter;
 	
+	private String output;
+	private String errors;
+	
+	private String completeModel;
+	
 	private ResourceSetFactory resourceSetFactory;
 	private ResourceSet mainResourceSet;
 	private Resource mainResource;
@@ -56,7 +56,22 @@ public class REPLInterpreter {
 		this.alePath = alePath;
 		this.modelUri = URI.createURI("dummy:/read." + xtextExtension);
 		
+		this.output = "";
+		this.errors = "";
+		
+		this.completeModel = "";
+		
 		this.init();
+	}
+	
+	
+	public String getOutput() {
+		return this.output;
+	}
+	
+	
+	public String getErrors() {
+		return this.errors;
 	}
 	
 	
@@ -109,40 +124,33 @@ public class REPLInterpreter {
 	}
 	
 	
-	public void interpret(String model) {
+	public boolean interpret(String model) {
+		this.output = "";
+		this.errors = "";
+		
 		// New resource set for the model to interpret
 		ResourceSet resourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);
 		
+		this.completeModel += "~ " + model + "\n";
 		Resource resource = resourceSet.createResource(this.modelUri);
 		try {
-			// Load the model given as parameter
-			resource.load(new ByteArrayInputStream(("~ " + model).getBytes()), resourceSet.getLoadOptions());
+			// Load the complete model after adding the model given as parameter
+			resource.load(new ByteArrayInputStream((this.completeModel).getBytes()), resourceSet.getLoadOptions());
 		} catch (IOException e1) {
 			e1.printStackTrace();
-			return;
+			return false;
 		}
 		
 		// Print parsing errors and exit if any
 		if (resource.getErrors().size() > 0) {
-			System.err.println(resource.getErrors());
-			return;
-		}
-		
-		// Needed to keep the objects referenced by other changed objects
-		// TODO : Check that the referencing object is indeed changed
-		IDiffProcessor customDiffProcessor = new DiffBuilder() {
-			@Override
-			public void referenceChange(Match match, EReference reference, EObject value, DifferenceKind kind,
-					DifferenceSource source) {
-				if (kind != DifferenceKind.ADD) {
-					super.referenceChange(match, reference, value, kind, source);
-				}
+			for (Diagnostic error : resource.getErrors()) {				
+				this.errors += error;
 			}
-		};
-		IDiffEngine diffEngine = new DefaultDiffEngine(customDiffProcessor);
-		
+			return false;
+		}
+			
 		IComparisonScope scope = new DefaultComparisonScope(this.mainResourceSet, resourceSet, null);
-		Comparison comparison = EMFCompare.builder().setDiffEngine(diffEngine).build().compare(scope);
+		Comparison comparison = EMFCompare.builder().build().compare(scope);
 		
 		List<Diff> differences = comparison.getDifferences();
 		
@@ -151,7 +159,8 @@ public class REPLInterpreter {
 		
 		// Merge the diff between the two models in the main resource set
 		merger.copyAllRightToLeft(differences, new BasicMonitor());
-		
+				
+		// Add the new instruction to the main resource
 		EObject caller = this.mainResource.getContents().get(0);
 		
 		// Search the root class in the parsed semantics
@@ -175,8 +184,18 @@ public class REPLInterpreter {
 			}
 		}
 		
+		PrintStream stdOut = System.out;
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(outputStream));
+		
 		// Eval the main method
 		this.interpreter.getCurrentEngine().eval(caller, main.get(), Arrays.asList());
+		this.output = outputStream.toString().trim();
+		
+		System.out.flush();
+		System.setOut(stdOut);
+		
+		return true;
 	}
 
 }

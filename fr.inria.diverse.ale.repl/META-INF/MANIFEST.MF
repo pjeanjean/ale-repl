@@ -12,6 +12,6 @@ Require-Bundle: org.eclipse.emf.ecoretools.ale;bundle-version="0.0.1",
  fr.inria.diverse.logo.model,
  org.eclipse.emf.ecore,
  org.eclipse.emf.common,
- org.eclipse.emf.compare;bundle-version="3.5.2",
- org.eclipse.sirius.common;bundle-version="6.0.1"
+ org.eclipse.sirius.common;bundle-version="6.0.1",
+ org.eclipse.emf.compare;bundle-version="3.5.2"
 Export-Package: fr.inria.diverse.ale.repl
