@@ -31,11 +31,11 @@ import org.eclipse.emf.ecoretools.ale.implementation.ExtendedClass;
 import org.eclipse.emf.ecoretools.ale.implementation.Method;
 import org.eclipse.emf.ecoretools.ale.implementation.ModelUnit;
 import org.eclipse.sirius.common.tools.api.resource.ResourceSetFactory;
+import org.eclipse.xtext.EcoreUtil2;
 
 public class REPLInterpreter {
 	
-	private String ecorePath;
-	private String alePath;
+	private Dsl environment;
 	private URI modelUri;
 	
 	private ALEInterpreter interpreter;
@@ -51,9 +51,8 @@ public class REPLInterpreter {
 	private List<ParseResult<ModelUnit>> parsedSemantics;
 	
 	
-	public REPLInterpreter(String ecorePath, String alePath, String xtextExtension) {
-		this.ecorePath = ecorePath;
-		this.alePath = alePath;
+	public REPLInterpreter(Dsl environment, String xtextExtension) {		
+		this.environment = environment;
 		this.modelUri = URI.createURI("dummy:/read." + xtextExtension);
 		
 		this.output = "";
@@ -62,6 +61,12 @@ public class REPLInterpreter {
 		this.completeModel = "";
 		
 		this.init();
+	}
+	
+	
+	public REPLInterpreter(String ecorePath, String alePath, String xtextExtension) {
+		this(new Dsl(Arrays.asList(URI.createFileURI(ecorePath).toString()),
+				Arrays.asList(alePath)), xtextExtension);	
 	}
 	
 	
@@ -77,13 +82,11 @@ public class REPLInterpreter {
 	
 	private void init() {		
 		this.interpreter = new ALEInterpreter();
-		
-		Dsl environment = new Dsl(Arrays.asList(URI.createFileURI(ecorePath).toString()), Arrays.asList(alePath));
-		
+			
 		// Factory to get resource sets for the models
 		this.resourceSetFactory = ResourceSetFactory.createFactory();
 		this.mainResourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);
-		
+
 		this.mainResource = this.mainResourceSet.createResource(this.modelUri);
 		try {
 			// Load an empty model to initialize the engine
@@ -96,7 +99,7 @@ public class REPLInterpreter {
 		EObject caller = this.mainResource.getContents().get(0);
 		
 		this.parsedSemantics = new DslBuilder(this.interpreter.getQueryEnvironment(), this.mainResourceSet)
-				.parse(environment);
+				.parse(this.environment);
 		
 		// Search the root class in the parsed semantics
 		List<ExtendedClass> classes = this.parsedSemantics.stream().map(p -> p.getRoot()).filter(e -> e != null)
@@ -129,17 +132,18 @@ public class REPLInterpreter {
 		this.errors = "";
 		
 		// New resource set for the model to interpret
-		ResourceSet resourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);
+		ResourceSet resourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);	
 		
-		this.completeModel += "~ " + model + "\n";
+		String newCompleteModel = this.completeModel +  "~ " + model + "\n";
 		Resource resource = resourceSet.createResource(this.modelUri);
 		try {
 			// Load the complete model after adding the model given as parameter
-			resource.load(new ByteArrayInputStream((this.completeModel).getBytes()), resourceSet.getLoadOptions());
+			resource.load(new ByteArrayInputStream((newCompleteModel).getBytes()), resourceSet.getLoadOptions());
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			return false;
 		}
+		EcoreUtil2.resolveAll(resourceSet);
 		
 		// Print parsing errors and exit if any
 		if (resource.getErrors().size() > 0) {
@@ -148,7 +152,9 @@ public class REPLInterpreter {
 			}
 			return false;
 		}
-			
+		
+		this.completeModel = newCompleteModel;
+		
 		IComparisonScope scope = new DefaultComparisonScope(this.mainResourceSet, resourceSet, null);
 		Comparison comparison = EMFCompare.builder().build().compare(scope);
 		
@@ -160,7 +166,7 @@ public class REPLInterpreter {
 		// Merge the diff between the two models in the main resource set
 		merger.copyAllRightToLeft(differences, new BasicMonitor());
 				
-		// Add the new instruction to the main resource
+		// Get the caller from the main resource
 		EObject caller = this.mainResource.getContents().get(0);
 		
 		// Search the root class in the parsed semantics
