@@ -38,6 +38,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
 
@@ -79,23 +80,28 @@ public class REPLView {
 		
 		this.output = new StyledText(parent, SWT.READ_ONLY | SWT.V_SCROLL);
 		this.output.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true));
-		this.output.setText("> ");
 
 		this.input = new Text(parent, SWT.SINGLE);
 		this.input.setLayoutData(new GridData(GridData.FILL, GridData.CENTER, true, false));
 		
 		this.errorColor = new Color(parent.getShell().getDisplay(), 255, 0, 0);
 		
-		this.executedModel = "";
-
 		parent.pack();
 	}
 	
-	public void loadLanguage(Dsl dsl, String xtextExtension, int port) {
+	public void loadLanguage(Dsl dsl, String xtextExtension, int port) {		
+		this.executedModel = "";
+		this.completions = null;
+		this.output.setText("> ");
+		
 		REPLInterpreter interpreter = new REPLInterpreter(
 				org.eclipse.gemoc.ale.interpreted.engine.Helper.gemocDslToAleDsl(dsl),
 				xtextExtension);
 		
+		Listener listeners[] = this.input.getListeners(SWT.Traverse);
+		for (Listener listener : listeners) {
+			this.input.removeListener(SWT.Traverse, listener);
+		}
 		this.input.addTraverseListener(new TraverseListener() {	
 			@Override
 			public void keyTraversed(TraverseEvent e) {
@@ -107,6 +113,10 @@ public class REPLView {
 			}
 		});
 	
+		listeners = this.input.getListeners(SWT.KeyUp);
+		for (Listener listener : listeners) {
+			this.input.removeListener(SWT.KeyUp, listener);
+		}
 		this.input.addKeyListener(new KeyListener() {	
 			@Override
 			public void keyReleased(KeyEvent e) {
@@ -118,7 +128,10 @@ public class REPLView {
 						StyleRange style = new StyleRange();
 						style.start = output.getText().length();
 						if (interpreter.interpret(command)) {
-							output.append(interpreter.getOutput() + "\n");
+							String outputString = interpreter.getOutput();
+							if (!outputString.equals("")) {
+								output.append(interpreter.getOutput() + "\n");
+							}
 							style.fontStyle = SWT.ITALIC;
 							executedModel += "~ " + command + "\n";
 						} else {
