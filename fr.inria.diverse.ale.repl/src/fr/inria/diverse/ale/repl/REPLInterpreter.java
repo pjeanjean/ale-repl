@@ -4,22 +4,25 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.eclipse.emf.common.util.BasicMonitor;
+import org.eclipse.emf.common.notify.Adapter;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.compare.Comparison;
-import org.eclipse.emf.compare.Diff;
-import org.eclipse.emf.compare.EMFCompare;
-import org.eclipse.emf.compare.merge.BatchMerger;
-import org.eclipse.emf.compare.merge.IBatchMerger;
-import org.eclipse.emf.compare.merge.IMerger;
-import org.eclipse.emf.compare.scope.DefaultComparisonScope;
-import org.eclipse.emf.compare.scope.IComparisonScope;
+import org.eclipse.emf.ecore.EAnnotation;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EGenericType;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EOperation;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.Resource.Diagnostic;
 import org.eclipse.emf.ecore.resource.ResourceSet;
@@ -36,14 +39,14 @@ import org.eclipse.xtext.EcoreUtil2;
 public class REPLInterpreter {
 	
 	private Dsl environment;
-	private URI modelUri;
+	private String xtextExtension;
+	private int modelIndex;
+	private EObject caller;
 	
 	private ALEInterpreter interpreter;
 	
 	private String output;
 	private String errors;
-	
-	private String completeModel;
 	
 	private ResourceSetFactory resourceSetFactory;
 	private ResourceSet mainResourceSet;
@@ -53,12 +56,11 @@ public class REPLInterpreter {
 	
 	public REPLInterpreter(Dsl environment, String xtextExtension) {		
 		this.environment = environment;
-		this.modelUri = URI.createURI("dummy:/read." + xtextExtension);
+		this.xtextExtension = xtextExtension;
+		this.modelIndex = 0;
 		
 		this.output = "";
 		this.errors = "";
-		
-		this.completeModel = "";
 		
 		this.init();
 	}
@@ -82,22 +84,23 @@ public class REPLInterpreter {
 	
 	private void init() {		
 		this.interpreter = new ALEInterpreter();
-			
+		
+		URI modelUri = URI.createURI("dummy:/interpreter." + this.xtextExtension);
+		
 		// Factory to get resource sets for the models
 		this.resourceSetFactory = ResourceSetFactory.createFactory();
-		this.mainResourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);
+		this.mainResourceSet = this.resourceSetFactory.createResourceSet(modelUri);
 
-		this.mainResource = this.mainResourceSet.createResource(this.modelUri);
+		this.mainResource = this.mainResourceSet.createResource(modelUri);
 		try {
 			// Load an empty model to initialize the engine
 			this.mainResource.load(new ByteArrayInputStream(new byte[] {}), this.mainResourceSet.getLoadOptions());
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			return;
-		}
+		}	
 		
-		EObject caller = this.mainResource.getContents().get(0);
-		
+		this.caller = this.mainResource.getContents().get(0);
 		this.parsedSemantics = new DslBuilder(this.interpreter.getQueryEnvironment(), this.mainResourceSet)
 				.parse(this.environment);
 		
@@ -132,18 +135,17 @@ public class REPLInterpreter {
 		this.errors = "";
 		
 		// New resource set for the model to interpret
-		ResourceSet resourceSet = this.resourceSetFactory.createResourceSet(this.modelUri);	
+		URI modelUri = URI.createURI("dummy:/instruction" + this.modelIndex++ + "." + this.xtextExtension);
 		
-		String newCompleteModel = this.completeModel +  "~ " + model + "\n";
-		Resource resource = resourceSet.createResource(this.modelUri);
+		Resource resource = this.mainResourceSet.createResource(modelUri);
 		try {
 			// Load the complete model after adding the model given as parameter
-			resource.load(new ByteArrayInputStream((newCompleteModel).getBytes()), resourceSet.getLoadOptions());
+			resource.load(new ByteArrayInputStream(model.getBytes()), this.mainResourceSet.getLoadOptions());
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			return false;
 		}
-		EcoreUtil2.resolveAll(resourceSet);
+		EcoreUtil2.resolveAll(resource);
 		
 		// Print parsing errors and exit if any
 		if (resource.getErrors().size() > 0) {
@@ -153,8 +155,7 @@ public class REPLInterpreter {
 			return false;
 		}
 		
-		this.completeModel = newCompleteModel;
-		
+		/*	
 		IComparisonScope scope = new DefaultComparisonScope(this.mainResourceSet, resourceSet, null);
 		Comparison comparison = EMFCompare.builder().build().compare(scope);
 		
@@ -165,14 +166,16 @@ public class REPLInterpreter {
 		
 		// Merge the diff between the two models in the main resource set
 		merger.copyAllRightToLeft(differences, new BasicMonitor());
-				
+		*/
+		
 		// Get the caller from the main resource
-		EObject caller = this.mainResource.getContents().get(0);
+		this.caller.eSet(this.caller.eClass().getEStructuralFeature("instruction"),
+				resource.getContents().get(0));
 		
 		// Search the root class in the parsed semantics
 		List<ExtendedClass> classes = this.parsedSemantics.stream().map(p -> p.getRoot()).filter(e -> e != null)
 				.flatMap(unit -> unit.getClassExtensions().stream())
-				.filter(ext -> ext.getBaseClass().getName().equals(caller.eClass().getName()))
+				.filter(ext -> ext.getBaseClass().getName().equals(this.caller.eClass().getName()))
 				.collect(Collectors.toList());
 				
 		// Get the 'main' tagged method
@@ -195,7 +198,7 @@ public class REPLInterpreter {
 		System.setOut(new PrintStream(outputStream));
 		
 		// Eval the main method
-		this.interpreter.getCurrentEngine().eval(caller, main.get(), Arrays.asList());
+		this.interpreter.getCurrentEngine().eval(this.caller, main.get(), Arrays.asList());
 		this.output = outputStream.toString().trim();
 		
 		System.out.flush();

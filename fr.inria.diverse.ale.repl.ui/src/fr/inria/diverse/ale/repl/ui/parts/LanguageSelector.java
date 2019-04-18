@@ -32,9 +32,6 @@ public class LanguageSelector {
 		Text port = new Text(parent, SWT.SINGLE);
 		port.setMessage("LSP Port");
 		
-		Text extension = new Text(parent, SWT.SINGLE);
-		extension.setMessage("XText extension");
-		
 		ToolItem languagesMenu = new ToolItem(toolBar, SWT.DROP_DOWN);
 		languagesMenu.setText("Languages");
 		
@@ -54,7 +51,7 @@ public class LanguageSelector {
 						}
 						REPLView.getInstance().loadLanguage(
 								DslHelper.load(menuItem.getText()),
-								extension.getText(),
+								language.toLowerCase().replaceAll(" ", "_"),
 								portInteger
 						);
 					}
