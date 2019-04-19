@@ -1,9 +1,8 @@
 package fr.inria.diverse.ale.repl.ui.handlers;
 
+import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.core.commands.IHandler;
-import org.eclipse.core.commands.IHandlerListener;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -23,20 +22,8 @@ import com.google.inject.Guice;
 
 import fr.inria.diverse.ale.repl.generator.REPLGenerator;
 
-public class Generate implements IHandler {
+public class Generate extends AbstractHandler {
 		
-	@Override
-	public void addHandlerListener(IHandlerListener handlerListener) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void dispose() {
-		// TODO Auto-generated method stub
-
-	}
-
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
@@ -68,23 +55,6 @@ public class Generate implements IHandler {
 		}
 		
 		return null;
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return true;
-	}
-
-	@Override
-	public boolean isHandled() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void removeHandlerListener(IHandlerListener handlerListener) {
-		// TODO Auto-generated method stub
-
 	}
 
 }

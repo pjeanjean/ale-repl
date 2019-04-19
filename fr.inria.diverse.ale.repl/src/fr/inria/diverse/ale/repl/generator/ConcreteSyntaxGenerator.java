@@ -423,6 +423,7 @@ public class ConcreteSyntaxGenerator {
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+						DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
 					}
 				}
 			}
