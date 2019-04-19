@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
@@ -29,6 +30,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EClassifier;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
@@ -253,8 +255,17 @@ public class ConcreteSyntaxGenerator {
 			}
 		}
 		
-		ReferencedMetamodel ecoreMetamodel = (ReferencedMetamodel) eRoot.getMetamodelDeclarations().stream()
-				.filter(m -> m.getAlias().equals("ecore")).findFirst().get();
+		Optional<AbstractMetamodelDeclaration> oEcoreMetamodel = eRoot.getMetamodelDeclarations().stream()
+				.filter(m -> (m.getAlias() != null) && m.getAlias().equals("ecore")).findFirst();
+		AbstractMetamodelDeclaration ecoreMetamodel;
+		if (oEcoreMetamodel.isPresent()) {
+			ecoreMetamodel = oEcoreMetamodel.get();
+		} else {
+			ecoreMetamodel = XtextFactory.eINSTANCE.createReferencedMetamodel();
+			ecoreMetamodel.setEPackage(EcorePackage.eINSTANCE);
+			ecoreMetamodel.setAlias("ecore");
+			eRoot.getMetamodelDeclarations().add(ecoreMetamodel);
+		}
 		EClass eObjectClass = (EClass) ecoreMetamodel.getEPackage().getEClassifier("EObject");
 		
 		// EntryPoint rule
@@ -287,8 +298,9 @@ public class ConcreteSyntaxGenerator {
 		rules.stream().forEach(rule -> {
 			// Find all the rules for interpretable instructions and set priority using `->` operator
 			TypeRef type = rule.getType();
-			if (type != null && ((EClass) type.getClassifier()).getESuperTypes()
-					.contains(interpretableInstructionClass)) {
+			if (type != null && type.getClassifier() instanceof EClass
+					&& ((EClass) type.getClassifier()).getESuperTypes() != null
+				    && ((EClass) type.getClassifier()).getESuperTypes().contains(interpretableInstructionClass)) {
 				RuleCall ruleCall = XtextFactory.eINSTANCE.createRuleCall();
 				ruleCall.eSet(ruleCall.eClass().getEStructuralFeature("rule"), rule);
 				ruleCall.setFirstSetPredicated(true);
