@@ -16,8 +16,31 @@
             allPopups="false"
             locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu">
          <command
-               commandId="fr.inria.diverse.ale.repl.ui.generate_command"
-               id="fr.inria.diverse.ale.repl.ui.generate_command"
+               commandId="fr.inria.diverse.ale.repl.ui.generate_repl_command"
+               id="fr.inria.diverse.ale.repl.ui.generate_repl_command"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <iterate
+                     ifEmpty="false"
+                     operator="or">
+                  <adapt
+                        type="org.eclipse.core.resources.IResource">
+                     <test
+                           property="org.eclipse.core.resources.name"
+                           value="*.v2r">
+                     </test>
+                  </adapt>
+               </iterate>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu">
+         <command
+               commandId="fr.inria.diverse.ale.repl.ui.generate_v2r_command"
+               id="fr.inria.diverse.ale.repl.ui.generate_v2r_command"
                style="push">
             <visibleWhen
                   checkEnabled="false">
@@ -40,15 +63,24 @@
          point="org.eclipse.ui.commands">
       <command
             categoryId="fr.inria.diverse.ale.repl.ui"
-            id="fr.inria.diverse.ale.repl.ui.generate_command"
+            id="fr.inria.diverse.ale.repl.ui.generate_repl_command"
             name="Generate REPL">
+      </command>
+      <command
+            categoryId="fr.inria.diverse.ale.repl.ui"
+            id="fr.inria.diverse.ale.repl.ui.generate_v2r_command"
+            name="Generate V2R">
       </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="fr.inria.diverse.ale.repl.ui.handlers.Generate"
-            commandId="fr.inria.diverse.ale.repl.ui.generate_command">
+            class="fr.inria.diverse.ale.repl.ui.handlers.GenerateREPL"
+            commandId="fr.inria.diverse.ale.repl.ui.generate_repl_command">
+      </handler>
+      <handler
+            class="fr.inria.diverse.ale.repl.ui.handlers.GenerateV2R"
+            commandId="fr.inria.diverse.ale.repl.ui.generate_v2r_command">
       </handler>
    </extension>
 

@@ -2,7 +2,6 @@ package fr.inria.diverse.ale.repl.generator;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,6 +11,7 @@ import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.codegen.ecore.generator.Generator;
 import org.eclipse.emf.codegen.ecore.genmodel.GenJDKLevel;
 import org.eclipse.emf.codegen.ecore.genmodel.GenModel;
@@ -20,38 +20,37 @@ import org.eclipse.emf.codegen.ecore.genmodel.generator.GenBaseGeneratorAdapter;
 import org.eclipse.emf.common.util.BasicMonitor;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
-import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
-import org.eclipse.emf.ecoretools.ale.ALEInterpreter;
-import org.eclipse.emf.ecoretools.ale.core.parser.Dsl;
-import org.eclipse.emf.ecoretools.ale.core.parser.DslBuilder;
-import org.eclipse.emf.ecoretools.ale.core.parser.visitor.ParseResult;
-import org.eclipse.emf.ecoretools.ale.implementation.ExtendedClass;
-import org.eclipse.emf.ecoretools.ale.implementation.ModelUnit;
-import org.eclipse.emf.ecoretools.ale.implementation.impl.MethodImpl;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.jdt.launching.LibraryLocation;
+import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.resource.XtextResourceSet;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+
+import fr.inria.diverse.ale.repl.Visitor2replRuntimeModule;
+import fr.inria.diverse.ale.repl.visitor2repl.Transformation;
 
 public class AbstractSyntaxGenerator {
 	
 	private String ecorePath;
-	private String alePath;
+	private String v2rPath;
 	
-	private ResourceSet resourceSet;
+	private XtextResourceSet resourceSet;
 	
 	
-	public AbstractSyntaxGenerator(String ecorePath, String alePath) {
+	public AbstractSyntaxGenerator(String ecorePath, String v2rPath) {
 		this.ecorePath = ecorePath;
-		this.alePath = alePath;
+		this.v2rPath = v2rPath;
 	}
 	
 	
@@ -86,7 +85,8 @@ public class AbstractSyntaxGenerator {
 			IProjectDescription projectDescription = project.getDescription();
 			projectDescription.setNatureIds(new String[] {"org.eclipse.sirius.nature.modelingproject",
 					"org.eclipse.jdt.core.javanature", "org.eclipse.pde.PluginNature",
-					"org.eclipse.gemoc.execution.sequential.javaxdsml.ide.ui.GemocSequentialLanguageNature"});
+					"org.eclipse.gemoc.execution.sequential.javaxdsml.ide.ui.GemocSequentialLanguageNature"
+					});
 			project.setDescription(projectDescription, null);
 			
 			IFolder modelFolder = project.getFolder("model");
@@ -126,29 +126,31 @@ public class AbstractSyntaxGenerator {
 	 * @return a URI of the generated file
 	 */
 	public URI generateEcore(String projectName, String languageName) {
-		URI ecoreUri = URI.createFileURI(ecorePath);
+		URI ecoreUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace().getRoot()
+				.getFileForLocation(new Path(ecorePath)).getFullPath().toOSString());
 		
-		ALEInterpreter interpreter = new ALEInterpreter();
-		Dsl environment = new Dsl(Arrays.asList(ecoreUri.toString()), Arrays.asList(alePath));	
+		Injector injector = Guice.createInjector(new Visitor2replRuntimeModule());
+		this.resourceSet = injector.getInstance(XtextResourceSet.class);
+		this.resourceSet.addLoadOption(XtextResource.OPTION_RESOLVE_ALL, Boolean.TRUE);
 		
-		this.resourceSet = new ResourceSetImpl();
-		this.resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore",
-				new EcoreResourceFactoryImpl());
-		
-		// Load the referenced ecore file
+		// Load the referenced ecore file and v2r file
 		Resource ecoreResource = this.resourceSet.getResource(ecoreUri, true);
-		List<ParseResult<ModelUnit>> parsedSemantics = new DslBuilder(interpreter.getQueryEnvironment(),
-				this.resourceSet)
-				.parse(environment);
+		Resource v2rResource = this.resourceSet.getResource(URI.createURI(this.v2rPath), true);
 		
-		// List methods annotated with the `@repl` tag in the referenced ale file
-		List<MethodImpl> steps = parsedSemantics.get(0).getRoot().eContents().stream()
-			.flatMap(obj -> obj.eContents().stream())
-			.filter(met -> (met instanceof MethodImpl)
-					&& ((MethodImpl) met).getTags().stream().anyMatch(t -> t.startsWith("repl")))
-			.map(met -> (MethodImpl) met).collect(Collectors.toList());
+		Transformation transformation = (Transformation) v2rResource.getContents().get(0);
+		
+		// Get classifiers for repl instructions
+		List<EClassifier> replClassifiers = transformation.getInstructions().stream()
+				.map(i -> i.getClassifier()).collect(Collectors.toList());
 		
 		EPackage rootPackage = (EPackage) ecoreResource.getContents().get(0);
+		EPackage newPackage = EcoreFactory.eINSTANCE.createEPackage();
+		
+		newPackage.setName(languageName.toLowerCase());
+		newPackage.setNsPrefix(languageName.toLowerCase());
+		String splitted[] = rootPackage.getNsURI().split("/");
+		splitted[2] = splitted[2] + "/repl";
+		newPackage.setNsURI(String.join("/", splitted));
 		
 		EcoreFactory ecoreFactory = EcoreFactory.eINSTANCE;
 	
@@ -156,52 +158,52 @@ public class AbstractSyntaxGenerator {
 		EClass interpretableInstructionClass = ecoreFactory.createEClass();
 		interpretableInstructionClass.setName("InterpretableInstruction");
 		interpretableInstructionClass.setAbstract(true);
-		interpretableInstructionClass.setInterface(true);
-		rootPackage.getEClassifiers().add(interpretableInstructionClass);
+		interpretableInstructionClass.setInterface(false);
+		EReference previousInstructionReference = EcoreFactory.eINSTANCE.createEReference();
+		previousInstructionReference.setName("previous");
+		previousInstructionReference.setLowerBound(0);
+		previousInstructionReference.setUpperBound(1);
+		previousInstructionReference.setEType(interpretableInstructionClass);
+		previousInstructionReference.setContainment(true);
+		newPackage.getEClassifiers().add(interpretableInstructionClass);
 		
 		// Create the Interpreter class
 		EClass interpreterClass = ecoreFactory.createEClass();
 		interpreterClass.setName("Interpreter");
 		EReference currentInstructionReference = ecoreFactory.createEReference();
 		currentInstructionReference.setName("instruction");
+		currentInstructionReference.setLowerBound(0);
+		currentInstructionReference.setUpperBound(1);
 		currentInstructionReference.setEType(interpretableInstructionClass);
 		currentInstructionReference.setContainment(false);
 		interpreterClass.getEStructuralFeatures().add(currentInstructionReference);
-		rootPackage.getEClassifiers().add(interpreterClass);
+		newPackage.getEClassifiers().add(interpreterClass);
 		
-		// For each repl method, add InterpretableInstruction as super type
-		for (MethodImpl step : steps) {
-			EClass baseClass = ((ExtendedClass) step.eContainer()).getBaseClass();
-			ecoreResource.getAllContents().forEachRemaining(el -> {
-				if (el instanceof EClass) {
-					EClass actualClass = (EClass) el;
-					if (actualClass.getName().equals(baseClass.getName()) &&
-							actualClass.getEPackage().getNsPrefix().equals(baseClass.getEPackage()
-									.getNsPrefix())) {						
-						if (!actualClass.getESuperTypes().contains(interpretableInstructionClass)) {
-							actualClass.getESuperTypes().add(interpretableInstructionClass);
-						}
-					}
-				}
-			});
-		}
-		
-		// Add `/repl` to the Ns URI of every package
-		ecoreResource.getAllContents().forEachRemaining(el -> {
-			if (el instanceof EPackage) {
-				EPackage pkg = (EPackage) el;
-				String splitted[] = pkg.getNsURI().split("/");
-				splitted[2] = splitted[2] + "/repl";
-				pkg.setNsURI(String.join("/", splitted));
+		// For each repl instruction, create a proxy
+		for (EClassifier classifier : replClassifiers) {
+			if (classifier instanceof EClass) {
+				EClass originalClass = (EClass) classifier;
+				EClass newClass = EcoreFactory.eINSTANCE.createEClass();
+				newClass.setName(originalClass.getName() + "_Instruction");
+				newClass.getESuperTypes().add(interpretableInstructionClass);
+				EReference original = EcoreFactory.eINSTANCE.createEReference();
+				original.setName("original");
+				original.setEType(originalClass);
+				original.setContainment(true);
+				original.setLowerBound(1);
+				original.setUpperBound(1);
+				newClass.getEStructuralFeatures().add(original);
+				newPackage.getEClassifiers().add(newClass);
 			}
-		});
+		}
 		
 		// Save the newly created ecore file
 		try {
-			ecoreResource.setURI(URI.createURI("platform:/resource/" + projectName + "/model/"
-					+ languageName + ".ecore", true));
-			ecoreResource.save(null);
-			return ecoreResource.getURI();
+			Resource newResource = this.resourceSet.createResource(
+					URI.createURI("platform:/resource/" + projectName + "/model/" + languageName + ".ecore", true));
+			newResource.getContents().add(newPackage);
+			newResource.save(null);
+			return newResource.getURI();
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -246,6 +248,7 @@ public class AbstractSyntaxGenerator {
 	 */
 	public void generateModelCode(URI genmodelUri) {
 		GenModel genmodel = (GenModel) this.resourceSet.getResource(genmodelUri, true).getContents().get(0);
+		genmodel.reconcile();
 		Generator generator = new Generator();
 		generator.requestInitialize();
 		generator.setInput(genmodel);
@@ -267,6 +270,41 @@ public class AbstractSyntaxGenerator {
 				EPackage.Registry.INSTANCE.put(nsUri, el);
 			}
 		});
+	}
+	
+	
+	/**
+	 * Add necessary EReferences to xtext generated repl ecore metamodel
+	 * @param ecoreUri the uri og the xtext generated ecore metamodel
+	 */
+	public void alterEcore(URI ecoreUri) {		
+		Resource ecoreResource = this.resourceSet.getResource(ecoreUri, true);
+		EPackage rootPackage = (EPackage) ecoreResource.getContents().get(0);
+	
+		EClass interpretableInstruction = (EClass) rootPackage.getEClassifier("InterpretableInstruction");
+		EClass interpreter = (EClass) rootPackage.getEClassifier("Interpreter");
+		
+		EReference previousReference = EcoreFactory.eINSTANCE.createEReference();
+		previousReference.setName("previous");
+		previousReference.setLowerBound(0);
+		previousReference.setUpperBound(1);
+		previousReference.setEType(interpretableInstruction);
+		previousReference.setContainment(true);
+		interpretableInstruction.getEStructuralFeatures().add(previousReference);
+		
+		EReference instructionReference = EcoreFactory.eINSTANCE.createEReference();
+		instructionReference.setName("instruction");
+		instructionReference.setLowerBound(0);
+		instructionReference.setUpperBound(1);
+		instructionReference.setEType(interpretableInstruction);
+		instructionReference.setContainment(false);
+		interpreter.getEStructuralFeatures().add(instructionReference);
+		
+		try {
+			ecoreResource.save(null);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 		
 }

@@ -6,7 +6,9 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.ICoreRunnable;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.gemoc.DslRuntimeModule;
 import org.eclipse.gemoc.commons.eclipse.ui.dialogs.SelectAnyIFileDialog;
@@ -22,7 +24,7 @@ import com.google.inject.Guice;
 
 import fr.inria.diverse.ale.repl.generator.REPLGenerator;
 
-public class Generate extends AbstractHandler {
+public class GenerateREPL extends AbstractHandler {
 		
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -33,7 +35,9 @@ public class Generate extends AbstractHandler {
 		XtextResourceSet rs = Guice.createInjector(new DslRuntimeModule()).getInstance(XtextResourceSet.class);
 		
 		if (selection.getFirstElement() instanceof IFile) {
-			IFile dslFile = (IFile) selection.getFirstElement();
+			IFile v2rFile = (IFile) selection.getFirstElement();
+			IFile dslFile = ResourcesPlugin.getWorkspace().getRoot().getFile(v2rFile.getFullPath()
+					.removeFileExtension().addFileExtension("dsl"));
 			Dsl dsl = (Dsl) rs.getResource(URI.createFileURI(dslFile.getLocation().toString()), true)
 					.getContents().get(0);
 			URI ecoreUri = URI.createURI(dsl.getEntries().stream().filter(e -> e.getKey().equals("ecore"))
@@ -45,12 +49,14 @@ public class Generate extends AbstractHandler {
 			dialog.setPattern("*.xtext");
 			if (dialog.open() == Dialog.OK) {
 				String xtextPath = ((IResource) dialog.getResult()[0]).getLocation().toOSString();
-				new REPLGenerator(
-						ResourcesPlugin.getWorkspace().getRoot()
-								.getFile(new Path(ecoreUri.toPlatformString(true))).getRawLocation().toOSString(),
-						ResourcesPlugin.getWorkspace().getRoot()
-								.getFile(new Path(aleUri.toPlatformString(true))).getRawLocation().toOSString(),
-						xtextPath).generate("fr.inria.diverse");
+				Job job = Job.create("REPL Generator", (ICoreRunnable) monitor ->
+						new REPLGenerator(v2rFile.getFullPath().toOSString(),
+								ResourcesPlugin.getWorkspace().getRoot().getFile(
+										new Path(ecoreUri.toPlatformString(true))).getRawLocation().toOSString(),
+								ResourcesPlugin.getWorkspace().getRoot().getFile(
+										new Path(aleUri.toPlatformString(true))).getRawLocation().toOSString(),
+								xtextPath).generate("fr.inria.diverse"));
+				job.schedule();
 			}	
 		}
 		

@@ -4,24 +4,13 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.eclipse.emf.common.notify.Adapter;
-import org.eclipse.emf.common.notify.Notification;
-import org.eclipse.emf.common.util.EList;
-import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.EAnnotation;
-import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.EClassifier;
-import org.eclipse.emf.ecore.EGenericType;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EOperation;
-import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.Resource.Diagnostic;
@@ -35,12 +24,15 @@ import org.eclipse.emf.ecoretools.ale.implementation.Method;
 import org.eclipse.emf.ecoretools.ale.implementation.ModelUnit;
 import org.eclipse.sirius.common.tools.api.resource.ResourceSetFactory;
 import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.diagnostics.Severity;
+import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.validation.CheckMode;
+import org.eclipse.xtext.validation.Issue;
 
 public class REPLInterpreter {
 	
 	private Dsl environment;
 	private String xtextExtension;
-	private int modelIndex;
 	private EObject caller;
 	
 	private ALEInterpreter interpreter;
@@ -57,7 +49,6 @@ public class REPLInterpreter {
 	public REPLInterpreter(Dsl environment, String xtextExtension) {		
 		this.environment = environment;
 		this.xtextExtension = xtextExtension;
-		this.modelIndex = 0;
 		
 		this.output = "";
 		this.errors = "";
@@ -90,6 +81,7 @@ public class REPLInterpreter {
 		// Factory to get resource sets for the models
 		this.resourceSetFactory = ResourceSetFactory.createFactory();
 		this.mainResourceSet = this.resourceSetFactory.createResourceSet(modelUri);
+		this.mainResourceSet.getLoadOptions().put("org.eclipse.xtext.scoping.LIVE_SCOPE", false);
 
 		this.mainResource = this.mainResourceSet.createResource(modelUri);
 		try {
@@ -135,7 +127,7 @@ public class REPLInterpreter {
 		this.errors = "";
 		
 		// New resource set for the model to interpret
-		URI modelUri = URI.createURI("dummy:/instruction" + this.modelIndex++ + "." + this.xtextExtension);
+		URI modelUri = URI.createURI("dummy:/instruction." + this.xtextExtension);
 		
 		Resource resource = this.mainResourceSet.createResource(modelUri);
 		try {
@@ -145,32 +137,50 @@ public class REPLInterpreter {
 			e1.printStackTrace();
 			return false;
 		}
+		
+		// Check that the parsed model is actually an instruction
+		if (!resource.getContents().get(0).eClass().getEAllSuperTypes()
+				.stream().anyMatch(c -> c.getName().equals("InterpretableInstruction"))) {
+			this.mainResourceSet.getResources().remove(resource);
+			return false;
+		}
+		
+		EObject newInstruction = resource.getContents().get(0);
+		
+		// Set history before resolving proxies
+		EStructuralFeature instructionFeature = this.caller.eClass().getEStructuralFeature("instruction");
+		EStructuralFeature previousFeature = newInstruction.eClass().getEStructuralFeature("previous");
+		if (newInstruction != null) {
+			newInstruction.eSet(previousFeature, this.caller.eGet(instructionFeature));
+		}
 		EcoreUtil2.resolveAll(resource);
 		
-		// Print parsing errors and exit if any
+		// Validate the resource
+		List<Issue> validationErrors = ((XtextResource) resource).getResourceServiceProvider()
+				.getResourceValidator().validate(resource, CheckMode.ALL, null).stream()
+				.filter(i -> i.getSeverity().equals(Severity.ERROR)).collect(Collectors.toList());
+			
+		// Print parsing errors after resolution and exit if any
 		if (resource.getErrors().size() > 0) {
 			for (Diagnostic error : resource.getErrors()) {				
 				this.errors += error;
 			}
+			this.mainResourceSet.getResources().remove(resource);
 			return false;
 		}
 		
-		/*	
-		IComparisonScope scope = new DefaultComparisonScope(this.mainResourceSet, resourceSet, null);
-		Comparison comparison = EMFCompare.builder().build().compare(scope);
-		
-		List<Diff> differences = comparison.getDifferences();
-		
-		IMerger.Registry mergerRegistry = IMerger.RegistryImpl.createStandaloneInstance();
-		IBatchMerger merger = new BatchMerger(mergerRegistry);
-		
-		// Merge the diff between the two models in the main resource set
-		merger.copyAllRightToLeft(differences, new BasicMonitor());
-		*/
+		// Print validation errors if any
+		if (!validationErrors.isEmpty()) {
+			for (Issue issue : validationErrors) {
+				if (!this.errors.contains(issue.getMessage()))
+					this.errors += issue.getMessage();
+			}
+			this.mainResourceSet.getResources().remove(resource);
+			return false;
+		}
 		
 		// Get the caller from the main resource
-		this.caller.eSet(this.caller.eClass().getEStructuralFeature("instruction"),
-				resource.getContents().get(0));
+		this.caller.eSet(instructionFeature, resource.getContents().get(0));
 		
 		// Search the root class in the parsed semantics
 		List<ExtendedClass> classes = this.parsedSemantics.stream().map(p -> p.getRoot()).filter(e -> e != null)
@@ -201,6 +211,7 @@ public class REPLInterpreter {
 		this.interpreter.getCurrentEngine().eval(this.caller, main.get(), Arrays.asList());
 		this.output = outputStream.toString().trim();
 		
+		this.mainResourceSet.getResources().remove(resource);
 		System.out.flush();
 		System.setOut(stdOut);
 		

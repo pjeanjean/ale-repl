@@ -1,20 +1,25 @@
 package fr.inria.diverse.ale.repl.generator;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -22,13 +27,10 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
-import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchesListener2;
-import org.eclipse.debug.ui.DebugUITools;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.EClassifier;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -40,14 +42,17 @@ import org.eclipse.jdt.internal.core.ClasspathEntry;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.pde.internal.core.plugin.WorkspacePluginModel;
 import org.eclipse.pde.internal.ui.wizards.tools.UpdateClasspathJob;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.xtext.AbstractMetamodelDeclaration;
 import org.eclipse.xtext.AbstractRule;
 import org.eclipse.xtext.Action;
 import org.eclipse.xtext.Alternatives;
+import org.eclipse.xtext.Assignment;
+import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.GeneratedMetamodel;
 import org.eclipse.xtext.Grammar;
 import org.eclipse.xtext.Group;
 import org.eclipse.xtext.ParserRule;
-import org.eclipse.xtext.ReferencedMetamodel;
 import org.eclipse.xtext.RuleCall;
 import org.eclipse.xtext.TypeRef;
 import org.eclipse.xtext.XtextFactory;
@@ -69,10 +74,12 @@ import com.google.inject.Injector;
 public class ConcreteSyntaxGenerator {
 	
 	private String xtextPath;
+	private String ecorePath;
 
 	
-	public ConcreteSyntaxGenerator(String xtextPath) {
+	public ConcreteSyntaxGenerator(String xtextPath, String ecorePath) {
 		this.xtextPath = xtextPath;
+		this.ecorePath = ecorePath;
 	}
 	
 	
@@ -110,7 +117,7 @@ public class ConcreteSyntaxGenerator {
 		conf.setRootLocation(targetLocation.getPath());
 		conf.getLanguage().setName(projectName + "." + languageName.substring(0, 1).toUpperCase()
 				+ languageName.substring(1));
-		conf.getLanguage().setFileExtensions(FileExtensions.fromString(languageName));
+		conf.getLanguage().setFileExtensions(FileExtensions.fromString(languageName.toLowerCase()));
 		conf.setXtextVersion(XtextVersion.getCurrent());
 		conf.setEncoding(Charsets.UTF_8);
 		conf.setBaseName(projectName);
@@ -153,16 +160,31 @@ public class ConcreteSyntaxGenerator {
 				}
 			}
 			
-			// Add dependency to model project
+			// Add dependency to model project and old xtext project for each
+			String ecoreProjectName = ResourcesPlugin.getWorkspace().getRoot()
+					.getFileForLocation(new Path(this.ecorePath)).getProject().getName();
+			String oldXtextProjectName = ResourcesPlugin.getWorkspace().getRoot()
+					.getFileForLocation(new Path(this.xtextPath)).getProject().getName();
 			try {
-				IFile manifestFile = pluginModels.get(0).getFile();
-				Manifest manifest = new Manifest(manifestFile.getContents());
-				Attributes.Name requireBundle = new Attributes.Name("Require-Bundle");
-				manifest.getMainAttributes().put(requireBundle,
-						manifest.getMainAttributes().get(requireBundle) + "," + modelProjectName);
-				ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-				manifest.write(outputStream);
-				manifestFile.setContents(new ByteArrayInputStream(outputStream.toByteArray()), true, false, null);
+				for (int i = 0; i < 3; i++) {
+					IFile manifestFile = pluginModels.get(i).getFile();
+					Manifest manifest = new Manifest(manifestFile.getContents());
+					Attributes.Name requireBundle = new Attributes.Name("Require-Bundle");
+					manifest.getMainAttributes().put(requireBundle,
+							manifest.getMainAttributes().get(requireBundle) + "," + ecoreProjectName
+							+ "," + oldXtextProjectName);
+					if (i == 2) {
+						String baseXtextProjectName = ResourcesPlugin.getWorkspace().getRoot()
+								.getFileForLocation(new Path(this.xtextPath)).getProject().getName();
+						manifest.getMainAttributes().put(requireBundle,
+								manifest.getMainAttributes().get(requireBundle) + ","
+										+ baseXtextProjectName + ".ui");
+					}
+					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+					manifest.write(outputStream);
+					manifestFile.setContents(new ByteArrayInputStream(outputStream.toByteArray()),
+							true, false, null);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}	
@@ -207,55 +229,28 @@ public class ConcreteSyntaxGenerator {
 					.put("xtext", injector.getInstance(IResourceServiceProvider.class));
 		}
 		
+		rs.getResource(URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace().getRoot()
+				.getFileForLocation(new Path(ecorePath)).getFullPath().toOSString()), true);
 		Resource ecoreResource = rs.getResource(ecoreUri, true);
-		Resource resource = rs.getResource(URI.createFileURI(this.xtextPath), true);
+		Resource xtextResource = rs.getResource(URI.createFileURI(this.xtextPath), true);
+		EcoreUtil2.resolveAll(ecoreResource);
+		EcoreUtil2.resolveAll(xtextResource);
 		
-		Grammar eRoot = (Grammar) resource.getContents().get(0);
-		EList<AbstractRule> rules = eRoot.getRules();
-		
+		Grammar eRoot = (Grammar) xtextResource.getContents().get(0);
+			
 		EPackage ecoreRoot = (EPackage) ecoreResource.getContents().get(0);
-		String rootPackagePrefix = (String) ecoreRoot.eGet(ecoreRoot.eClass().getEStructuralFeature("nsPrefix"));
 		
-		AbstractMetamodelDeclaration rootPackageXText = null;
-		EList<AbstractMetamodelDeclaration> metamodelDeclarations = eRoot.getMetamodelDeclarations();
+		Grammar newRoot = XtextFactory.eINSTANCE.createGrammar();
+		EList<AbstractRule> rules = newRoot.getRules();
 		
 		// Change the name of the grammar
-		eRoot.setName(projectName + "." + languageName.substring(0, 1).toUpperCase() + languageName.substring(1));
+		newRoot.setName(projectName + "." + languageName.substring(0, 1).toUpperCase() + languageName.substring(1));
 		
-		// Replace (if possible) the packages referenced in the xtext file by the corresponding ones from
-		//   the ecore file and also do it for the classifiers in these packages
-		ecoreResource.getAllContents().forEachRemaining(el -> {
-			if (el instanceof EPackage) {
-				EPackage pkg = (EPackage) el;
-				for (AbstractMetamodelDeclaration rm : metamodelDeclarations) {
-					EPackage pkg2 = rm.getEPackage();
-					if (pkg.getNsPrefix().equals(pkg2.getNsPrefix())) {
-						rm.setEPackage(pkg);
-						resource.getAllContents().forEachRemaining(el2 -> {
-							if (el2 instanceof TypeRef) {
-								TypeRef type = (TypeRef) el2;
-								if (type.getMetamodel() == rm) {
-									EClassifier oldClassifier = type.getClassifier();
-									String classifierName = oldClassifier.getName();
-									type.setClassifier(pkg.getEClassifier(classifierName));
-								}
-							}
-						});
-					}
-				}
-			}
-		});
+		// Add extend to old grammar
+		newRoot.getUsedGrammars().clear();
+		newRoot.getUsedGrammars().add(eRoot);
 		
-		// Find the root package from the ones defined in the xtext file
-		for (AbstractMetamodelDeclaration rm : metamodelDeclarations) {
-			EPackage pkg = rm.getEPackage();
-			if (pkg.getNsPrefix().equals(rootPackagePrefix)) {
-				rootPackageXText = rm;
-				break;
-			}
-		}
-		
-		Optional<AbstractMetamodelDeclaration> oEcoreMetamodel = eRoot.getMetamodelDeclarations().stream()
+		Optional<AbstractMetamodelDeclaration> oEcoreMetamodel = newRoot.getMetamodelDeclarations().stream()
 				.filter(m -> (m.getAlias() != null) && m.getAlias().equals("ecore")).findFirst();
 		AbstractMetamodelDeclaration ecoreMetamodel;
 		if (oEcoreMetamodel.isPresent()) {
@@ -264,8 +259,14 @@ public class ConcreteSyntaxGenerator {
 			ecoreMetamodel = XtextFactory.eINSTANCE.createReferencedMetamodel();
 			ecoreMetamodel.setEPackage(EcorePackage.eINSTANCE);
 			ecoreMetamodel.setAlias("ecore");
-			eRoot.getMetamodelDeclarations().add(ecoreMetamodel);
+			newRoot.getMetamodelDeclarations().add(ecoreMetamodel);
 		}
+		
+		GeneratedMetamodel newMetamodel = XtextFactory.eINSTANCE.createGeneratedMetamodel();
+		newMetamodel.setName(languageName.toLowerCase());
+		newMetamodel.setEPackage(ecoreRoot);
+		newRoot.getMetamodelDeclarations().add(newMetamodel);
+		
 		EClass eObjectClass = (EClass) ecoreMetamodel.getEPackage().getEClassifier("EObject");
 		
 		// EntryPoint rule
@@ -277,7 +278,7 @@ public class ConcreteSyntaxGenerator {
 		entryPointRule.setName("EntryPoint");
 		entryPointRule.setType(entryPointType);
 		entryPointRule.getHiddenTokens();
-		rules.add(0, entryPointRule);
+		rules.add(entryPointRule);
 		
 		Alternatives entryPointAlternatives = XtextFactory.eINSTANCE.createAlternatives();
 		entryPointRule.setAlternatives(entryPointAlternatives);
@@ -286,7 +287,7 @@ public class ConcreteSyntaxGenerator {
 		EClass interpretableInstructionClass = (EClass) ecoreRoot.getEClassifier("InterpretableInstruction");
 		
 		TypeRef interpretableInstructionType = XtextFactory.eINSTANCE.createTypeRef();
-		interpretableInstructionType.setMetamodel(rootPackageXText);
+		interpretableInstructionType.setMetamodel(newMetamodel);
 		interpretableInstructionType.setClassifier(interpretableInstructionClass);
 		
 		ParserRule interpretableInstructionRule = XtextFactory.eINSTANCE.createParserRule();
@@ -295,34 +296,46 @@ public class ConcreteSyntaxGenerator {
 		interpretableInstructionRule.getHiddenTokens();
 		
 		Alternatives interpretableInstructionAlternatives = XtextFactory.eINSTANCE.createAlternatives();
-		rules.stream().forEach(rule -> {
-			// Find all the rules for interpretable instructions and set priority using `->` operator
-			TypeRef type = rule.getType();
-			if (type != null && type.getClassifier() instanceof EClass
-					&& ((EClass) type.getClassifier()).getESuperTypes() != null
-				    && ((EClass) type.getClassifier()).getESuperTypes().contains(interpretableInstructionClass)) {
-				RuleCall ruleCall = XtextFactory.eINSTANCE.createRuleCall();
-				ruleCall.eSet(ruleCall.eClass().getEStructuralFeature("rule"), rule);
-				ruleCall.setFirstSetPredicated(true);
-				interpretableInstructionAlternatives.getElements().add(ruleCall);
-			}
-		});
-		
-		// Delete rules from the alternatives if they are children of other rules
-		this.deleteChildren(interpretableInstructionAlternatives);
-		
-		interpretableInstructionRule.setAlternatives(interpretableInstructionAlternatives);
-		rules.add(1, interpretableInstructionRule);
+		ecoreRoot.getEClassifiers().stream()
+				.filter(c -> ((EClass) c).getESuperTypes().contains(interpretableInstructionClass))
+				.forEach(c -> {
+					Group group = XtextFactory.eINSTANCE.createGroup();
+					Action action = XtextFactory.eINSTANCE.createAction();
+					TypeRef type = XtextFactory.eINSTANCE.createTypeRef();
+					type.setClassifier(c);
+					type.setMetamodel(newMetamodel);
+					action.setType(type);
+					group.getElements().add(action);
+					Assignment assignment = XtextFactory.eINSTANCE.createAssignment();
+					assignment.setFeature("original");
+					assignment.setOperator("=");
+					RuleCall ruleCall = XtextFactory.eINSTANCE.createRuleCall();
+					Optional<AbstractRule> rule = eRoot.getRules().stream()
+							.filter(r -> r.getType().getClassifier()
+									.equals(((EClass) c).getEStructuralFeatures().get(0).getEType()))
+							.findFirst();
+					if (rule.isPresent()) {
+						ruleCall.setRule(rule.get());
+					} else {
+						System.err.println(c.eClass().getEReferences().get(0).getEType().getName() + " not found!");
+					}
+					assignment.setTerminal(ruleCall);
+					group.getElements().add(assignment);
+					interpretableInstructionAlternatives.getElements().add(group);
+				});
 		
 		RuleCall interpretableInstructionRuleCall = XtextFactory.eINSTANCE.createRuleCall();
 		interpretableInstructionRuleCall.setRule(interpretableInstructionRule);
-		entryPointAlternatives.getElements().add(interpretableInstructionRuleCall);
+		interpretableInstructionRule.setAlternatives(interpretableInstructionAlternatives);
+		rules.add(interpretableInstructionRule);
+		
+		entryPointAlternatives.getElements().add(EcoreUtil.copy(interpretableInstructionRuleCall));
 		
 		// Interpreter rule
 		EClass interpreterClass = (EClass) ecoreRoot.getEClassifier("Interpreter");
 		
 		TypeRef interpreterType = XtextFactory.eINSTANCE.createTypeRef();
-		interpreterType.setMetamodel(rootPackageXText);
+		interpreterType.setMetamodel(newMetamodel);
 		interpreterType.setClassifier(interpreterClass);
 				
 		ParserRule interpreterRule = XtextFactory.eINSTANCE.createParserRule();
@@ -334,7 +347,7 @@ public class ConcreteSyntaxGenerator {
 		interpreterAction.setType(EcoreUtil.copy(interpreterType));
 		interpreterRule.setAlternatives(interpreterAction);
 		
-		rules.add(2, interpreterRule);
+		rules.add(interpreterRule);
 		
 		RuleCall interpreterRuleCall = XtextFactory.eINSTANCE.createRuleCall();
 		interpreterRuleCall.setRule(interpreterRule);
@@ -344,41 +357,22 @@ public class ConcreteSyntaxGenerator {
 		Resource newResource = rs.createResource(URI.createURI("platform:/resource/" + projectName
 				+ "/src/" + projectName.replace(".", "/")
 				+ "/" + languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + ".xtext"));
-		Grammar newRoot = (Grammar) EcoreUtil.copy(resource.getContents().get(0));
-		newResource.getContents().add(newRoot);
 		
-		// Replace the URI of referenced packages to file URIs
-		List<String> referencedResources = new ArrayList<>();
-		for (AbstractMetamodelDeclaration rm : newRoot.getMetamodelDeclarations()) {
-			EPackage pkg = (EPackage) rm.getEPackage();
-			String pkgPath = "";
-			EPackage pkgTemp = pkg;
-			while (pkgTemp.eContainer() != null) {
-				pkgPath = "/" + pkgTemp.getName() + pkgPath;
-				pkgTemp = (EPackage) pkgTemp.eContainer();
-			}
-			String filePath = rs.getResource(URI.createURI(pkg.getNsURI()), true).getURI().toPlatformString(true);
-			if (filePath != null) {
-				filePath = ResourcesPlugin.getWorkspace().getRoot().getLocation() + filePath;
-				if (!referencedResources.contains(filePath)) {
-					referencedResources.add(filePath);
-				}
-				pkg.setNsURI("file:" + filePath + "#/" + pkgPath);
-			}
-		}
+		newResource.getContents().add(newRoot);
 		
 		// Add referencedResource to mwe2 file
 		try {
-			File mweFile = new File(ResourcesPlugin.getWorkspace().getRoot().getLocation()
-					+ "/" + projectName + "/src/" + projectName.replace(".", "/") + "/Generate"
+			IFile mweFile = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
+					.getFile("/src/" + projectName.replace(".", "/") + "/Generate"
 					+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + ".mwe2");
-			List<String> mweLines = Files.readAllLines(mweFile.toPath());
-			for (String referencedResource : referencedResources) {
-				mweLines.add(mweLines.size() - 3, "\t\t\treferencedResource = \"file:"
-						+ referencedResource.replace(".ecore", ".genmodel") + "\"");
-			}
-			Files.write(mweFile.toPath(), mweLines);
-		} catch (IOException e) {
+			List<String> mweLines = new BufferedReader(new InputStreamReader(mweFile.getContents()))
+					.lines().collect(Collectors.toList());
+			mweLines.add(mweLines.size() - 3, "\t\t\tparserGenerator = { options = { backtrack = true } }");
+			mweLines.add(mweLines.size() - 3, "\t\t\treferencedResource = \"file:"
+					+ this.ecorePath.replace(".ecore", ".genmodel") + "\"");
+			mweFile.setContents(new ByteArrayInputStream(mweLines.stream().collect(Collectors.joining("\n"))
+					.getBytes()), true, false, null);
+		} catch (CoreException e) {
 			e.printStackTrace();
 		}
 		
@@ -393,20 +387,32 @@ public class ConcreteSyntaxGenerator {
 	}
 			
 	
+	private Semaphore semaphore;
 	/**
 	 * Generate a grammar by running a MWE2 workflow
-	 * 
-	 * Also set global scoping to ResourceSetGlobalScoping
 	 * @param projectName the project in which the grammar is defined
 	 * @param languageName the name of the language that the grammar defines
+	 * @return the URI of the generated ecore metamodel from the grammar
 	 */
-	public void generateGrammar(String projectName, String languageName) {
-		// Launch the MWE2 workflow
-		new Mwe2LaunchShortcut().launch(new StructuredSelection(ResourcesPlugin.getWorkspace().getRoot()
-				.getFile(new Path(projectName + "/src/" + projectName.replace(".", "/") + "/Generate"
-						+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + ".mwe2"))),
-				"run");
-		ILaunchConfiguration launchConf = DebugUITools.getLastLaunch("org.eclipse.debug.ui.launchGroup.run");
+	public URI generateGrammar(String projectName, String languageName) {
+		String upperLanguageName = languageName.substring(0, 1).toUpperCase() + languageName.substring(1);
+		this.semaphore = new Semaphore(0);		
+		// Launch the MWE2 workflow (needs to be done in UI thread)
+		Display.getDefault().asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				new Mwe2LaunchShortcut().launch(new StructuredSelection(ResourcesPlugin.getWorkspace().getRoot()
+						.getFile(new Path(projectName + "/src/" + projectName.replace(".", "/") + "/Generate"
+								+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1)
+								+ ".mwe2"))), "run");
+				semaphore.release();
+			}
+		});
+		try {
+			semaphore.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		DebugPlugin.getDefault().getLaunchManager().addLaunchListener(new ILaunchesListener2() {
 			@Override
 			public void launchesRemoved(ILaunch[] launches) {}
@@ -420,87 +426,86 @@ public class ConcreteSyntaxGenerator {
 			@Override
 			public void launchesTerminated(ILaunch[] launches) {
 				// Set the global scoping after the workflow ends
-				for (ILaunch launch : launches) {
-					if (launch.getLaunchConfiguration().equals(launchConf)) {
-						try {
-							File moduleFile = new File(ResourcesPlugin.getWorkspace().getRoot().getLocation()
-									+ "/" + projectName + "/src/" + projectName.replace(".", "/")
-									+ "/" + languageName.substring(0, 1).toUpperCase() + languageName.substring(1)
-									+ "RuntimeModule.xtend");
-							List<String> moduleLines = Files.readAllLines(moduleFile.toPath());
-							moduleLines.add(moduleLines.size() - 1, "\toverride bindIGlobalScopeProvider() { " + 
-									"return org.eclipse.xtext.scoping.impl.ResourceSetGlobalScopeProvider " + 
-									"}");
-							Files.write(moduleFile.toPath(), moduleLines);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
+				if (Arrays.stream(launches).anyMatch(l -> l.getLaunchConfiguration()
+						.getName().startsWith("Generate" + upperLanguageName + ".mwe2"))) {
+					try {
+						IProject xtextProject =
+								ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+						xtextProject.refreshLocal(IResource.DEPTH_INFINITE, null);
+					} catch (CoreException e) {
+						e.printStackTrace();
 					}
+					DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
+					semaphore.release();
 				}
 			}
 		});
+		try {
+			semaphore.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			return null;
+		}
+		return URI.createURI("platform:/resource/" + projectName + "/model/generated/"
+				+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + ".ecore");
 	}
-
+	
+	
+	/**
+	 * Create scope provider for root REPL elements
+	 * @param projectName the name of the xtext project
+	 * @param languageName the name of the language
+	 */
+	public void createScope(String projectName, String languageName) {
+		String upperLanguageName = languageName.substring(0, 1).toUpperCase() + languageName.substring(1);
+		String fileContent = String.join("\n",
+				"package " + projectName + ".scoping",
+				"",
+				"import org.eclipse.emf.ecore.EObject", 
+				"import org.eclipse.emf.ecore.EReference", 
+				"import org.eclipse.xtext.scoping.IScope",
+				"import org.eclipse.xtext.scoping.Scopes",
+				"import java.util.Collections",
+				"",
+				"class " + upperLanguageName + "ScopeProvider extends Abstract" + upperLanguageName
+						+ "ScopeProvider {",
+				"	override getScope(EObject context, EReference reference) {",
+				"		var baseScope = super.getScope(context, reference)",
+				"		var interpreterScope = scopeForInterpretableInstruction(context)",
+				"		",
+				"		return Scopes.scopeFor(baseScope.allElements.map[it.EObjectOrProxy], interpreterScope)",
+				"	}",
+				"	",
+				"	def protected IScope scopeForInterpretableInstruction(EObject context) {",
+				"		if (context.eClass.EAllSuperTypes.exists[it.name.equals(\"InterpretableInstruction\")]) {",
+				"			var previous = context.eGet(context.eClass.getEStructuralFeature(\"previous\")) "
+						+ "as EObject",
+				"			if (previous === null) {",
+				"				return IScope.NULLSCOPE",
+				"			}",
+				"			return Scopes.scopeFor(",
+				"					Collections.singleton(",
+				"							previous.eGet(previous.eClass.getEStructuralFeature(\"original\")) "
+						+ "as EObject),",
+				"					scopeForInterpretableInstruction(previous))",
+				"		}",
+				"		if (context.eContainer === null) {",
+				"			return IScope.NULLSCOPE",
+				"		}",
+				"		return scopeForInterpretableInstruction(context.eContainer)",
+				"	}",
+				"}"
+				);
 		
-	private void deleteChildren(Alternatives alternatives) {
-		for (int i = 0; i < alternatives.getElements().size(); i++) {
-			RuleCall rc1 = (RuleCall) alternatives.getElements().get(i);
-			for (int j = 0; j < alternatives.getElements().size(); j++) {
-				if (i != j) {
-					RuleCall rc2 = (RuleCall) alternatives.getElements().get(j);
-					if (rc1.getRule().getType().getClassifier().equals(rc2.getRule().getType().getClassifier())
-							&& this.isChild(rc1, rc2, new ArrayList<AbstractRule>())) {
-						alternatives.getElements().remove(j);
-						j--;
-					}
-				}
-			}
+		IFile scopeFile = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
+				.getFile("src/" + projectName.replace(".", "/") + "/scoping/"
+						+ upperLanguageName + "ScopeProvider.xtend");
+		try {
+			scopeFile.setContents(new ByteArrayInputStream(fileContent.getBytes()), true, false, null);
+		} catch (CoreException e) {
+			e.printStackTrace();
 		}
+		
 	}
-	
-	
-	private boolean isChild(RuleCall rc1, RuleCall rc2, List<AbstractRule> visited) {
-		boolean child = false;
-		if (rc1.getRule().equals(rc2.getRule())) {
-			return true;
-		} else if (rc1.getRule().getAlternatives() instanceof Alternatives) {
-			Alternatives rc1Alternatives = (Alternatives) rc1.getRule().getAlternatives();
-			for (int i = 0; i < rc1Alternatives.getElements().size(); i++) {
-				if (rc1Alternatives.getElements().get(i) instanceof RuleCall) {
-					if (!visited.contains(((RuleCall) rc1Alternatives.getElements().get(i)).getRule())) {
-						visited.add(((RuleCall) rc1Alternatives.getElements().get(i)).getRule());
-						child |= this.isChild((RuleCall) rc1Alternatives.getElements().get(i), rc2, visited);
-					}
-				} else if (rc1Alternatives.getElements().get(i) instanceof Group) {
-					child |= this.isChild((Group) rc1Alternatives.getElements().get(i), rc2, visited);
-				}
-			}
-		} else if (rc1.getRule().getAlternatives() instanceof RuleCall) {
-			if (!visited.contains(((RuleCall) rc1.getRule().getAlternatives()).getRule())) {
-				visited.add(((RuleCall) rc1.getRule().getAlternatives()).getRule());
-				return this.isChild((RuleCall) rc1.getRule().getAlternatives(), rc2, visited);
-			}
-		} else if (rc1.getRule().getAlternatives() instanceof Group) {
-			return this.isChild((Group) rc1.getRule().getAlternatives(), rc2, visited);
-		}
-		return child;
-	}
-	
-	
-	private boolean isChild(Group group, RuleCall rc, List<AbstractRule> visited) {
-		boolean child = false;
-		for (int i = 0; i < group.getElements().size(); i++) {
-			if (group.getElements().get(i) instanceof RuleCall) {
-				if (!visited.contains(((RuleCall) group.getElements().get(i)).getRule())) {
-					visited.add(((RuleCall) group.getElements().get(i)).getRule());
-					child |= this.isChild((RuleCall) group.getElements().get(i), rc, visited);
-				}
-			} else if (group.getElements().get(i) instanceof Group) {
-				child |= this.isChild((Group) group.getElements().get(i), rc, visited);
-			}
-		}
-		return child;
-	}
-
+		
 }
