@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Bundle-ManifestVersion: 2
-Bundle-Name: App
-Bundle-SymbolicName: fr.inria.diverse.ale.repl.app;singleton:=true
-Bundle-Version: 1.0.0.qualifier
-Automatic-Module-Name: fr.inria.diverse.ale.repl.app
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Require-Bundle: org.eclipse.equinox.app,
- fr.inria.diverse.ale.repl;bundle-version="1.0.0"
