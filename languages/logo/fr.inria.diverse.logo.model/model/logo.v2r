@@ -17,8 +17,8 @@ self.st := logolang::SymbolTable.create();
 self.st.init();
 }
 instruction logo.Statement:
-help right "Turn turtle of p degrees to the right";
-help forward "Move turtle of p units forward";
+help right 'Turn turtle of p degrees to the right';
+help forward 'Move turtle of p units forward';
 execute(logo_repl.turtle, logo_repl.st) =>
 logo_repl.turtle.toString();
 instruction logo.Expression:
