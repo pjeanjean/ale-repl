@@ -1,0 +1,15 @@
+/CompositeGeneratorNode.java
+/GeneratorNodeExtensions.java
+/GeneratorNodeProcessor.java
+/GeneratorWhiteSpaceConfig.java
+/IGeneratorNode.java
+/IndentNode.java
+/NewLineNode.java
+/TemplateNode.java
+/TextNode.java
+/TraceNode.java
+/Traced.java
+/TracedAccessors.java
+/TracedAccessorsProcessor.java
+/TracedProcessor.java
+/TracingSugar.java

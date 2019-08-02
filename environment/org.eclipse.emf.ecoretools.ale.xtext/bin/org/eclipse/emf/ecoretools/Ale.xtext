@@ -1,0 +1,244 @@
+/*******************************************************************************
+ * Copyright (c) 2017 Inria and Obeo.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Inria - initial API and implementation
+ *******************************************************************************/
+grammar org.eclipse.emf.ecoretools.Ale with org.eclipse.xtext.common.Terminals
+
+generate ale "http://www.eclipse.org/emf/ecoretools/Ale"
+
+/*****************
+ *  ALE grammar  *
+ *****************/
+
+rRoot returns Unit :
+	'behavior' name=rQualified ';' imports+=rImport* services+=rService* xtendedClasses+=rClass*
+;
+
+rImport returns Import : 
+	'import' name=rQualified 'as' alias=Ident '
+;'
+;
+
+rService returns Service :
+	'use' name=rQualified ';'
+;
+
+rClass returns BehavioredClass :
+	rOpenClass | rNewClass
+;
+
+rOpenClass returns ExtendedClass :
+	'open' 'class' name=rQualified ('extends' extends+=rQualified (',' extends+=rQualified)* )? '{' attributes+=rAttribute* operations+=rOperation* '}'
+;
+
+rNewClass returns RuntimeClass :
+	'class' name=Ident '{' attributes+=rAttribute* operations+=rOperation* '}'
+;
+
+rOperation returns Operation :
+	tag+=rTag* ('def' | 'override') type=rType name=Ident '(' (params+=rVariable (',' params+=rVariable)*)? ')' body=rBlock
+;
+
+rTag returns Tag :
+	'@' name=Ident
+;
+
+rVariable returns Variable :
+	type=rType name=Ident
+;
+
+rAttribute returns Attribute :
+	modifier=('contains' | 'unique')? bounds=rCardinality? opposite=rOpposite? type=rType name=Ident (':=' exp=rExpression)? ';'
+;
+
+rCardinality :
+	INT  '..' (INT| MultOp)
+;
+
+rOpposite :
+	'opposite' name=Ident
+;
+
+rSimpleStatement returns Statement:
+		  rVarDecl 
+		| rAssign
+		| rInsert
+		| rRemove
+		| rExpression
+;
+
+rBlockStatement returns Statement:
+		  rForEach
+		| rWhile
+		| rIf
+;
+
+rVarDecl returns VarDecl :
+	type=rType name=Ident (':=' exp=rExpression)?
+;
+
+rAssign returns Assign :
+	target=expression ':=' exp=rExpression
+;
+
+rInsert returns Insert :
+	target=expression '+=' exp=rExpression
+;
+
+rRemove returns Remove :
+	target=expression '-=' exp=rExpression
+;
+
+rForEach returns ForEach :
+	'for' '(' iterator=Ident  'in' collection=rCollection ')' block=rBlock
+;
+
+rCollection returns Collection:
+	'[' min=INT '..' max=INT ']' | exp=rExpression
+;
+
+rBlock returns Block :
+	{Block}
+	'{' 
+	( 
+		(statements+=rSimpleStatement ';' | statements+=rBlockStatement) ((statements+=rSimpleStatement ';' | statements+=rBlockStatement))*
+	)? 
+	'}'
+;
+
+rIf returns If :
+	'if' '(' cond=rExpression ')' then=rBlock ('else' else=rBlock)?
+;
+
+rWhile returns While :
+	'while' '(' cond=rExpression ')' block=rBlock
+;
+
+rSwitch : 
+	'switch' '(' (paramName=Ident ':')? paramVal=rExpression')' '{'
+		cases+=rCase+
+		'default' ':' other=rExpression
+	'}'
+;
+
+rCase : guard=rType? ('case' match=rExpression)? ':' value=rExpression
+;
+
+rExpression returns ExpressionStmt :
+	exp=(rSwitch | expression)
+;
+
+/***************
+ * AQL grammar *
+ ***************/
+
+expression returns Expression :
+	nonLeftRecExpression 
+	(
+		  {Call.target=current} '.' name=Ident'(' (params+=expression (',' params+=expression)*)? ')'
+		| {Feature.target=current} '.' feature=Ident
+	    | {Apply.target=current} '->' 
+	    	(
+	    	  (name=collectionIterator '(' varName=Ident (':' varType=typeLiteral)? '|' lambda=expression ')' ) 
+	    	| (name=Ident'(' (params+=expression (',' params+=expression)*)? ')'
+	    		
+	    	)
+	    )
+	    
+		| {Mult.left=current} MultOp right=expression
+		| {Add.left=current} addOp right=expression
+		| {Comp.left=current} op=compOp right=expression
+		
+		| {And.left=current} 'and' right=expression
+		| {Or.left=current}'or' right=expression
+		| {Xor.left=current} 'xor' right=expression
+		| {Implie.left=current} 'implie' right=expression
+		
+	)*
+;
+
+nonLeftRecExpression returns Expression:
+              {Not} 'not' exp=expression
+		     |{Min} '-' exp=expression
+		     |{VarRef} ID=Ident
+		     |{Lit} literal=literal
+		     |'(' expression ')'
+		     |{Conditional} 'if' cond=expression 'then' then=expression 'else' else=expression 'endif'
+		     |{Let} 'let' bindings+=binding (',' bindings+=binding)* 'in' exp=expression
+;
+
+binding : name=Ident (':' type=typeLiteral)? '=' exp=expression
+;
+
+addOp: '+' | '-'
+;
+
+compOp :     '<='
+	    	|'>='
+	  		|'!='
+	  		|'<>'
+	  		|'='
+	  		|'=='
+	 		|'<'
+	  		|'>'
+;
+
+collectionIterator : 'select' | 'reject' | 'collect' | 'any' | 'exists' | 'forAll' | 'isUnique' | 'one' | 'sortedBy' | 'closure'
+;
+
+literal :    {String} value=STRING
+		   | {Int} value=INT
+		   | {Real} value= Real
+		   | {True}'true'
+		   | {False}'false'
+		   | {Null} 'null'
+		   | {Sequence} 'Sequence{' (params+=expression (',' params+=expression)*)? '}'
+		   | {OrderedSet} 'OrderedSet{' (params+=expression (',' params+=expression)*)? '}'
+		   | {Enum} Ident '::' Ident '::' Ident
+//		   | Ident '::' Ident ':'
+		   | typeLiteral
+;
+
+typeLiteral :   {StringType}'String'
+		      | {IntType}'Integer'
+		      | {RealType}'Real'
+		      | {BoolType}'Boolean'
+		      | {SeqType} 'Sequence(' type=typeLiteral')'
+		      | {SetType} 'OrderedSet(' type=typeLiteral')'
+		      | classifierTypeRule
+		      | {ClassifierSetType}'{' types+=classifierTypeRule ('|' types+=classifierTypeRule)* '}'
+;
+
+classifierTypeRule :   {ClassifierType} packageName=Ident '::' className=Ident
+//				     | Ident ':' 
+;
+
+rType: typeLiteral | name=rQIdent
+;
+
+rQIdent : Ident ('::' Ident)*;
+
+rQualified : Ident ('.'Ident)*
+;
+
+terminal MultOp : '*' | '/'
+;
+
+terminal Real : ('0'..'9')+'.'('0'..'9')+
+;
+
+terminal Ident : (Letter | '_') (Letter | '0'..'9' | '_')*
+;
+
+terminal Letter : ('a'..'z'|'A'..'Z')
+;
+
+//terminal STRING	: 
+//			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
+//;
