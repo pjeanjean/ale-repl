@@ -69,7 +69,7 @@ public class SemanticGenerator {
 	 * @param ecoreUri the URI to the ecore files
 	 * 
 	 */
-	public void createDsl(String projectName, String languageName, URI... ecoreUri) {
+	public void createDsl(String projectName, String languageName, URI ecoreUri[], URI aleUri[]) {
 		String dslContent =
 				"name=" + languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + "\n"
 				+ "ecore=" + ecoreUri[0];
@@ -77,7 +77,10 @@ public class SemanticGenerator {
 			dslContent += ("," + ecoreUri[i]);
 		}
 		dslContent += "\n"
-				+ "ale=" + URI.createURI(ecoreUri[0].toString().replaceAll("ecore$", "ale"));
+				+ "ale=" + aleUri[0];		
+		for (int i = 1; i < aleUri.length; i++) {
+			dslContent += ("," + aleUri[i]);
+		}	
 		
 		IFile dslFile = ResourcesPlugin.getWorkspace().getRoot()
 				.getFile(new Path(ecoreUri[0].toPlatformString(true).replaceAll("ecore$", "dsl")));
@@ -140,22 +143,13 @@ public class SemanticGenerator {
 			rs.getResource(uri, true);
 		}
 		
-		Resource aleResource = rs.getResource(URI.createURI(ecoreUri[0].toString().replaceAll("ecore$", "ale")),
-				true);
+		Resource aleResource = rs.getResource(URI.createFileURI(this.alePath), true);
+		Resource newAleResource = rs.createResource(URI.createURI(ecoreUri[0].toString().replaceAll("ecore$", "ale")));
 		Unit unit = (Unit) aleResource.getContents().get(0);
+		Unit newUnit = AleFactory.eINSTANCE.createUnit();
 		
-		// Remove main and init tags for all existing operations
-		unit.eAllContents().forEachRemaining(e -> {
-			if (e instanceof Operation) {
-				Operation o = (Operation) e;
-				for (int i = 0; i < o.getTag().size(); i++) {
-					Tag t = o.getTag().get(i);
-					if (t.getName().equals("init") || t.getName().equals("main")) {
-						o.getTag().remove(i);
-					}
-				}
-			}
-		});
+		newUnit.setName(unit.getName() + "_repl");
+		newAleResource.getContents().add(newUnit);
 		
 		Resource v2rResource = rs.getResource(URI.createURI("platform:/resource" + this.v2rPath), true);
 		EcoreUtil.resolveAll(v2rResource);
@@ -207,7 +201,7 @@ public class SemanticGenerator {
 		mainOperationStatementCall.getParams().add(mainOperationStatementCallVar);
 	
 		interpreterClass.setName("Interpreter");
-		unit.getXtendedClasses().add(0, interpreterClass);
+		newUnit.getXtendedClasses().add(0, interpreterClass);
 		
 		// Create class and interpret operation for Help command
 		BehavioredClass helpBc = AleFactory.eINSTANCE.createExtendedClass();
@@ -217,7 +211,7 @@ public class SemanticGenerator {
 		Block helpBlock = AleFactory.eINSTANCE.createBlock();
 		helpOperation.setBody(helpBlock);
 		helpBc.getOperations().add(helpOperation);
-		unit.getXtendedClasses().add(1, helpBc);
+		newUnit.getXtendedClasses().add(1, helpBc);
 		
 		replTransformation.getInstructions().stream().forEach(i -> {
 			BehavioredClass bc = AleFactory.eINSTANCE.createExtendedClass();
@@ -351,7 +345,7 @@ public class SemanticGenerator {
 				ifElseCall.setTarget(EcoreUtil.copy(i.getEvalResult()));
 			}
 			bc.getOperations().add(replOperation);
-			unit.getXtendedClasses().add(1, bc);
+			newUnit.getXtendedClasses().add(1, bc);
 		});
 		
 		// Finish setting up Help command
@@ -370,7 +364,7 @@ public class SemanticGenerator {
 		
 		// Save the created resource
 		try {
-			aleResource.save(null);
+			newAleResource.save(null);
 			// Need to convert double quotes to simple quotes (because the hack in ALE does the reverse)
 			Files.write(newAlePath, String.join("\n", Files.readAllLines(newAlePath)).replace('"', '\'').getBytes(),
 					StandardOpenOption.TRUNCATE_EXISTING);
@@ -378,7 +372,7 @@ public class SemanticGenerator {
 			e.printStackTrace();
 		}
 		
-		return aleResource.getURI();
+		return newAleResource.getURI();
 	}
 	
 }

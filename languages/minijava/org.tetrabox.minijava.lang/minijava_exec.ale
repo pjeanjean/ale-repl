@@ -12,7 +12,6 @@ open class Program {
 	@init
 	def void initialize() { // dispatch
 		// possibly useless if we assume a main is available
-		
 		miniJava::Context rootCont := miniJava::Context.create();
 		miniJava::State state := miniJava::State.create();
 		state.outputStream := miniJava::OutputStream.create();
@@ -100,44 +99,37 @@ open class Assignment {
 			miniJava::SymbolRef assigneeSymbolRef := assignee;
 			miniJava::SymbolBinding existingBinding := context.findBinding(assigneeSymbolRef.symbol);
 			existingBinding.value := right;
-		} else {
-			if(assignee.oclIsKindOf(miniJava::VariableDeclaration)) {
-				miniJava::VariableDeclaration assigneeVariableDeclaration := assignee;
-				miniJava::SymbolBinding binding := miniJava::SymbolBinding.create();
-				binding.symbol := assigneeVariableDeclaration;
-				binding.value := right;
-				context.bindings += binding;
-			} else {
-				if(assignee.oclIsKindOf(miniJava::FieldAccess)) {
-					miniJava::FieldAccess assigneeFieldAccess := assignee;
-					miniJava::Field f := assigneeFieldAccess.field;
-					
-					miniJava::ObjectRefValue realReceiverValue := assigneeFieldAccess.receiver.evaluateExpression(state);
-					miniJava::ObjectInstance realReceiver := realReceiverValue.instance;
+		} else if(assignee.oclIsKindOf(miniJava::VariableDeclaration)) {
+			miniJava::VariableDeclaration assigneeVariableDeclaration := assignee;
+			miniJava::SymbolBinding binding := miniJava::SymbolBinding.create();
+			binding.symbol := assigneeVariableDeclaration;
+			binding.value := right;
+			context.bindings += binding;
+		} else if(assignee.oclIsKindOf(miniJava::FieldAccess)) {
+			miniJava::FieldAccess assigneeFieldAccess := assignee;
+			miniJava::Field f := assigneeFieldAccess.field;
+			
+			miniJava::ObjectRefValue realReceiverValue := assigneeFieldAccess.receiver.evaluateExpression(state);
+			miniJava::ObjectInstance realReceiver := realReceiverValue.instance;
 
-					miniJava::FieldBinding existingBinding := realReceiver.fieldbindings->select(x | x.field == f)->first();
-					if(existingBinding == null) {
-						miniJava::FieldBinding binding := miniJava::FieldBinding.create();
-						binding.field := f;
-						binding.value := right;
-						realReceiver.fieldbindings += binding;
-					} else {
-						existingBinding.value := right; // implicit assignment does not work...
-					}
-				} else {
-					if(assignee.oclIsKindOf(miniJava::ArrayAccess)) {
-						miniJava::ArrayAccess assigneeArrayAccess := assignee;
-						miniJava::ArrayRefValue arrayRefValue := assigneeArrayAccess.object.evaluateExpression(state);
-						miniJava::ArrayInstance array := arrayRefValue.instance;
-						miniJava::IntegerValue integerValue := assigneeArrayAccess.index.evaluateExpression(state);
-						int index := integerValue.value;
-						array.value.set(index, right);
- 
-					} else {
-						// ERROR
-					}	
-				}
+			miniJava::FieldBinding existingBinding := realReceiver.fieldbindings->select(x | x.field == f)->first();
+			if(existingBinding == null) {
+				miniJava::FieldBinding binding := miniJava::FieldBinding.create();
+				binding.field := f;
+				binding.value := right;
+				realReceiver.fieldbindings += binding;
+			} else {
+				existingBinding.value := right; // implicit assignment does not work...
 			}
+		} else if(assignee.oclIsKindOf(miniJava::ArrayAccess)) {
+			miniJava::ArrayAccess assigneeArrayAccess := assignee;
+			miniJava::ArrayRefValue arrayRefValue := assigneeArrayAccess.object.evaluateExpression(state);
+			miniJava::ArrayInstance array := arrayRefValue.instance;
+			miniJava::IntegerValue integerValue := assigneeArrayAccess.index.evaluateExpression(state);
+			int index := integerValue.value;
+			array.value.set(index, right);
+ 		} else {
+			// ERROR
 		}
 	} 
 }

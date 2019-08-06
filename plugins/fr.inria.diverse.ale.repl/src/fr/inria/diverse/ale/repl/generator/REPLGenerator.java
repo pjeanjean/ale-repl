@@ -26,7 +26,9 @@ public class REPLGenerator {
 				.replace(".ecore", "_repl");
 		baseName += "." + languageName.toLowerCase();
 		URI ecoreBaseUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
-				.getRoot().getFileForLocation(new Path(this.ecorePath)).getFullPath().toOSString());
+				.getRoot().getFileForLocation(new Path(this.ecorePath)).getFullPath().toString());
+		URI aleBaseUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
+				.getRoot().getFileForLocation(new Path(this.alePath)).getFullPath().toString());
 		AbstractSyntaxGenerator asGenerator = new AbstractSyntaxGenerator(this.ecorePath, this.v2rPath);
 		IProject asProject = asGenerator.createProject(baseName + ".model");
 		URI ecoreUri = asGenerator.generateEcore(asProject.getName(), languageName);
@@ -44,7 +46,9 @@ public class REPLGenerator {
 		csGenerator.createScope(csProject.getName(), languageName);
 
 		SemanticGenerator semGenerator = new SemanticGenerator(this.alePath, this.v2rPath);
-		semGenerator.createDsl(csProject.getName(), languageName, generatedEcoreUri, ecoreBaseUri);
+		URI generatedAleUri = URI.createURI(generatedEcoreUri.toString().replaceAll("ecore$", "ale"));
+		semGenerator.createDsl(csProject.getName(), languageName, new URI[] {generatedEcoreUri, ecoreBaseUri},
+				new URI[] {generatedAleUri, aleBaseUri});
 		semGenerator.generateAle(generatedEcoreUri, ecoreBaseUri);
 		
 		LSPServerGenerator lspServerGenerator = new LSPServerGenerator(csProject.getName(), languageName);
