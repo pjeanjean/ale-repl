@@ -113,7 +113,7 @@ rBlock returns Block :
 ;
 
 rIf returns If :
-	'if' '(' cond=rExpression ')' then=rBlock ('else' else=rBlock)?
+	'if' '(' cond=rExpression ')' then=rBlock ('else' (else=rBlock | nestedIf=rIf))?
 ;
 
 rWhile returns While :
@@ -239,6 +239,6 @@ terminal Ident : (Letter | '_') (Letter | '0'..'9' | '_')*
 terminal Letter : ('a'..'z'|'A'..'Z')
 ;
 
-//terminal STRING	: 
-//			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
-//;
+terminal STRING	: 
+			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
+;
