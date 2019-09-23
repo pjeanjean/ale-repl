@@ -33,7 +33,17 @@ Require-Bundle: org.antlr.runtime,
  com.google.guava,
  org.eclipse.xtext.xbase.lib,
  org.eclipse.xtend.lib,
- org.eclipse.xtend.lib.macro
+ org.eclipse.xtend.lib.macro,
+ org.eclipse.gemoc.trace.gemoc;bundle-version="3.0.1",
+ org.eclipse.gemoc.trace.gemoc.api;bundle-version="3.0.1",
+ org.eclipse.gemoc.trace.commons.model;bundle-version="3.0.1",
+ org.eclipse.emf.transaction;bundle-version="1.9.1",
+ org.eclipse.gemoc.xdsmlframework.api;bundle-version="4.0.0",
+ org.eclipse.gemoc.execution.sequential.javaengine;bundle-version="4.0.0",
+ org.eclipse.gemoc.executionframework.engine,
+ org.eclipse.gemoc.commons.eclipse;bundle-version="3.0.0",
+ org.eclipse.gemoc.ale.interpreted.engine;bundle-version="1.0.0",
+ org.eclipse.gemoc.executionframework.debugger;bundle-version="4.0.0"
 Export-Package: fr.inria.diverse.ale.repl,
  fr.inria.diverse.ale.repl.generator,
  fr.inria.diverse.ale.repl.server

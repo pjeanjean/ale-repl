@@ -10,8 +10,7 @@ package org.tetrabox.minijava.xtext.miniJava;
  *
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getNullValue()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface NullValue extends Value {

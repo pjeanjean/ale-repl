@@ -20,8 +20,7 @@ import org.eclipse.emf.ecore.EObject;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getObjectInstance()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface ObjectInstance extends EObject {

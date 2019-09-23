@@ -678,6 +678,15 @@ public class MiniJavaSwitch<T> extends Switch<T> {
 				if (result == null) result = defaultCase(theEObject);
 				return result;
 			}
+			case MiniJavaPackage.NATIVE_EXPRESSION: {
+				NativeExpression nativeExpression = (NativeExpression)theEObject;
+				T result = caseNativeExpression(nativeExpression);
+				if (result == null) result = caseExpression(nativeExpression);
+				if (result == null) result = caseStatement(nativeExpression);
+				if (result == null) result = caseAssignee(nativeExpression);
+				if (result == null) result = defaultCase(theEObject);
+				return result;
+			}
 			default: return defaultCase(theEObject);
 		}
 	}
@@ -1864,6 +1873,21 @@ public class MiniJavaSwitch<T> extends Switch<T> {
 	 * @generated
 	 */
 	public T caseModulo(Modulo object) {
+		return null;
+	}
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em>Native Expression</em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em>Native Expression</em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
+	 * @generated
+	 */
+	public T caseNativeExpression(NativeExpression object) {
 		return null;
 	}
 

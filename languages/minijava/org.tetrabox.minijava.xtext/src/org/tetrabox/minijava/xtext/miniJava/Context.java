@@ -24,8 +24,7 @@ import org.eclipse.emf.ecore.EObject;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getContext()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface Context extends EObject {

@@ -3,16 +3,22 @@
  */
 package fr.inria.diverse.ale.repl
 
-import org.eclipse.xtext.formatting.IFormatter
-import fr.inria.diverse.ale.repl.formatting.Visitor2replFormatter
+import org.eclipse.xtext.scoping.IGlobalScopeProvider
+import fr.inria.diverse.ale.repl.scoping.Visitor2replGlobalScopeProvider
+import org.eclipse.xtext.formatting2.IFormatter2
+import fr.inria.diverse.ale.repl.formatting2.Visitor2replFormatter
 
 /**
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
  */
 class Visitor2replRuntimeModule extends AbstractVisitor2replRuntimeModule {
 	
-	override Class<? extends IFormatter> bindIFormatter() {
+	override Class<? extends IFormatter2> bindIFormatter2() {
 		Visitor2replFormatter
+	}
+	
+	override Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
+		Visitor2replGlobalScopeProvider
 	}
 	
 }

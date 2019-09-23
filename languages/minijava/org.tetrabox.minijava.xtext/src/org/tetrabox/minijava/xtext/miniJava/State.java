@@ -24,7 +24,7 @@ import org.eclipse.emf.ecore.EObject;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getState()
- * @model annotation="aspect"
+ * @model
  * @generated
  */
 public interface State extends EObject {

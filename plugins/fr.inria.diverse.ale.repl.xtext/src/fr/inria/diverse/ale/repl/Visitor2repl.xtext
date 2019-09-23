@@ -5,16 +5,16 @@ import "http://www.eclipse.org/emf/ecoretools/Ale" as ale
 generate visitor2repl "http://www.inria.fr/diverse/ale/repl/visitor2repl"
 
 REPL:
-	model=Model interpreter=Interpreter instructions+=Instruction+;
+	model+=Model+ instructions+=Instruction+ interpreter=Interpreter;
 
 Model:
-	'import' packages+=[ecore::EPackage|FQN] (',' packages+=[ecore::EPackage|FQN])*;
+	'import' importURI=STRING;
 
 FQN:
 	Ident ("." Ident)*;
 
 Interpreter:
-	'repl' name=Ident ':'
+	'interpreter' name=Ident ':'
 		('attribute' attributes+=rAttribute)*
 		('initrepl' initMethod=rOperation)?;
 

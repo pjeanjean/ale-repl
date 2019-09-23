@@ -22,8 +22,7 @@ import org.eclipse.emf.ecore.EObject;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getFrame()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface Frame extends EObject {

@@ -11,8 +11,7 @@ import org.eclipse.emf.ecore.EObject;
  *
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getValue()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface Value extends EObject {

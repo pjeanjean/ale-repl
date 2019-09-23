@@ -16,8 +16,7 @@ package org.tetrabox.minijava.xtext.miniJava;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getMethodCall2()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface MethodCall2 extends Call {

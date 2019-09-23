@@ -16,8 +16,7 @@ package org.tetrabox.minijava.xtext.miniJava;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getObjectRefValue()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface ObjectRefValue extends Value {

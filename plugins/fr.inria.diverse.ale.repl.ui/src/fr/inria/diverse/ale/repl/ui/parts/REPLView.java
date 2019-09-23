@@ -32,15 +32,18 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
+import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
@@ -54,6 +57,8 @@ public class REPLView {
 	
 	private Text input;
 	private StyledText output;
+	
+	private String prompt;
 
 	private Color errorColor;
 	
@@ -90,8 +95,10 @@ public class REPLView {
 		this.output = new StyledText(parent, SWT.READ_ONLY | SWT.V_SCROLL);
 		this.output.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true));
 
-		this.input = new Text(parent, SWT.SINGLE);
+		this.input = new Text(parent, SWT.SINGLE | SWT.BORDER);
 		this.input.setLayoutData(new GridData(GridData.FILL, GridData.CENTER, true, false));
+		
+		this.prompt = "> ";
 		
 		this.errorColor = new Color(parent.getShell().getDisplay(), 255, 0, 0);
 		
@@ -103,7 +110,6 @@ public class REPLView {
 		this.tempInstruction = "";
 		
 		this.completions = null;
-		this.output.setText("> ");
 		
 		this.stopLspServer();
 		
@@ -123,6 +129,27 @@ public class REPLView {
 					case SWT.TRAVERSE_TAB_PREVIOUS:
 						e.doit = false;
 				}
+			}
+		});
+		this.output.addKeyListener(new KeyListener() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				Event newEvent = new Event();
+				newEvent.type = SWT.KeyDown;
+				newEvent.keyCode = e.keyCode;
+				newEvent.character = e.character;
+				input.setFocus();
+				output.getDisplay().post(newEvent);
+				newEvent = new Event();
+				newEvent.type = SWT.KeyUp;
+				newEvent.keyCode = e.keyCode;
+				newEvent.character = e.character;
+				output.getDisplay().post(newEvent);
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				
 			}
 		});
 	
@@ -157,7 +184,7 @@ public class REPLView {
 						tempInstruction = "";
 						completions = null;
 						String command = input.getText();
-						output.append(command + "\n");
+						output.append(prompt + command + "\n");
 						StyleRange style = new StyleRange();
 						style.start = output.getText().length();
 						if (interpreter.interpret(command)) {
@@ -172,7 +199,6 @@ public class REPLView {
 							style.foreground = errorColor;
 						}
 						style.length = output.getText().length() - style.start;
-						output.append("> ");
 						output.setStyleRange(style);
 						ScrollBar sc = output.getVerticalBar();
 						sc.setSelection(sc.getMaximum());
@@ -243,7 +269,10 @@ public class REPLView {
 				Display.getDefault().asyncExec(() -> this.input.setEnabled(false));
 				this.lspServer = lspServer;
 				this.lspServer.runServer(port);
-				Display.getDefault().asyncExec(() -> this.input.setEnabled(true));
+				Display.getDefault().asyncExec(() -> {
+					this.input.setEnabled(true);
+					this.input.setMessage(this.prompt);
+				});
 			}).start();
 			
 			new Thread(() ->  {
@@ -275,6 +304,8 @@ public class REPLView {
 			}).start();
 			
 			this.handler = Helper.createHandler(CompletionClient.class);
+		} else {
+			this.input.setMessage(this.prompt);
 		}
 	}
 

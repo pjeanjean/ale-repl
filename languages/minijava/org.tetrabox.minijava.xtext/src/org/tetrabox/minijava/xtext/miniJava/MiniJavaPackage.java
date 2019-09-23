@@ -95,22 +95,13 @@ public interface MiniJavaPackage extends EPackage {
 	int PROGRAM__CLASSES = 2;
 
 	/**
-	 * The feature id for the '<em><b>State</b></em>' reference.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 * @ordered
-	 */
-	int PROGRAM__STATE = 3;
-
-	/**
 	 * The number of structural features of the '<em>Program</em>' class.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 * @ordered
 	 */
-	int PROGRAM_FEATURE_COUNT = 4;
+	int PROGRAM_FEATURE_COUNT = 3;
 
 	/**
 	 * The number of operations of the '<em>Program</em>' class.
@@ -3521,6 +3512,43 @@ public interface MiniJavaPackage extends EPackage {
 	int MODULO_OPERATION_COUNT = EXPRESSION_OPERATION_COUNT + 0;
 
 	/**
+	 * The meta object id for the '{@link org.tetrabox.minijava.xtext.miniJava.impl.NativeExpressionImpl <em>Native Expression</em>}' class.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see org.tetrabox.minijava.xtext.miniJava.impl.NativeExpressionImpl
+	 * @see org.tetrabox.minijava.xtext.miniJava.impl.MiniJavaPackageImpl#getNativeExpression()
+	 * @generated
+	 */
+	int NATIVE_EXPRESSION = 79;
+
+	/**
+	 * The feature id for the '<em><b>Value</b></em>' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int NATIVE_EXPRESSION__VALUE = EXPRESSION_FEATURE_COUNT + 0;
+
+	/**
+	 * The number of structural features of the '<em>Native Expression</em>' class.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int NATIVE_EXPRESSION_FEATURE_COUNT = EXPRESSION_FEATURE_COUNT + 1;
+
+	/**
+	 * The number of operations of the '<em>Native Expression</em>' class.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int NATIVE_EXPRESSION_OPERATION_COUNT = EXPRESSION_OPERATION_COUNT + 0;
+
+	/**
 	 * The meta object id for the '{@link org.tetrabox.minijava.xtext.miniJava.AccessLevel <em>Access Level</em>}' enum.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
@@ -3528,7 +3556,7 @@ public interface MiniJavaPackage extends EPackage {
 	 * @see org.tetrabox.minijava.xtext.miniJava.impl.MiniJavaPackageImpl#getAccessLevel()
 	 * @generated
 	 */
-	int ACCESS_LEVEL = 79;
+	int ACCESS_LEVEL = 80;
 
 
 	/**
@@ -3573,17 +3601,6 @@ public interface MiniJavaPackage extends EPackage {
 	 * @generated
 	 */
 	EReference getProgram_Classes();
-
-	/**
-	 * Returns the meta object for the reference '{@link org.tetrabox.minijava.xtext.miniJava.Program#getState <em>State</em>}'.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @return the meta object for the reference '<em>State</em>'.
-	 * @see org.tetrabox.minijava.xtext.miniJava.Program#getState()
-	 * @see #getProgram()
-	 * @generated
-	 */
-	EReference getProgram_State();
 
 	/**
 	 * Returns the meta object for class '{@link org.tetrabox.minijava.xtext.miniJava.Import <em>Import</em>}'.
@@ -5591,6 +5608,27 @@ public interface MiniJavaPackage extends EPackage {
 	EReference getModulo_Right();
 
 	/**
+	 * Returns the meta object for class '{@link org.tetrabox.minijava.xtext.miniJava.NativeExpression <em>Native Expression</em>}'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the meta object for class '<em>Native Expression</em>'.
+	 * @see org.tetrabox.minijava.xtext.miniJava.NativeExpression
+	 * @generated
+	 */
+	EClass getNativeExpression();
+
+	/**
+	 * Returns the meta object for the attribute '{@link org.tetrabox.minijava.xtext.miniJava.NativeExpression#getValue <em>Value</em>}'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the meta object for the attribute '<em>Value</em>'.
+	 * @see org.tetrabox.minijava.xtext.miniJava.NativeExpression#getValue()
+	 * @see #getNativeExpression()
+	 * @generated
+	 */
+	EAttribute getNativeExpression_Value();
+
+	/**
 	 * Returns the meta object for enum '{@link org.tetrabox.minijava.xtext.miniJava.AccessLevel <em>Access Level</em>}'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
@@ -5656,14 +5694,6 @@ public interface MiniJavaPackage extends EPackage {
 		 * @generated
 		 */
 		EReference PROGRAM__CLASSES = eINSTANCE.getProgram_Classes();
-
-		/**
-		 * The meta object literal for the '<em><b>State</b></em>' reference feature.
-		 * <!-- begin-user-doc -->
-		 * <!-- end-user-doc -->
-		 * @generated
-		 */
-		EReference PROGRAM__STATE = eINSTANCE.getProgram_State();
 
 		/**
 		 * The meta object literal for the '{@link org.tetrabox.minijava.xtext.miniJava.impl.ImportImpl <em>Import</em>}' class.
@@ -7332,6 +7362,24 @@ public interface MiniJavaPackage extends EPackage {
 		 * @generated
 		 */
 		EReference MODULO__RIGHT = eINSTANCE.getModulo_Right();
+
+		/**
+		 * The meta object literal for the '{@link org.tetrabox.minijava.xtext.miniJava.impl.NativeExpressionImpl <em>Native Expression</em>}' class.
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+		 * @see org.tetrabox.minijava.xtext.miniJava.impl.NativeExpressionImpl
+		 * @see org.tetrabox.minijava.xtext.miniJava.impl.MiniJavaPackageImpl#getNativeExpression()
+		 * @generated
+		 */
+		EClass NATIVE_EXPRESSION = eINSTANCE.getNativeExpression();
+
+		/**
+		 * The meta object literal for the '<em><b>Value</b></em>' attribute feature.
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+		 * @generated
+		 */
+		EAttribute NATIVE_EXPRESSION__VALUE = eINSTANCE.getNativeExpression_Value();
 
 		/**
 		 * The meta object literal for the '{@link org.tetrabox.minijava.xtext.miniJava.AccessLevel <em>Access Level</em>}' enum.

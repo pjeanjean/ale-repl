@@ -137,6 +137,7 @@ public class MiniJavaFactoryImpl extends EFactoryImpl implements MiniJavaFactory
 			case MiniJavaPackage.SYMBOL_TO_SYMBOL_BINDING_MAP: return (EObject)createSymbolToSymbolBindingMap();
 			case MiniJavaPackage.CLAZZ_TO_METHOD_MAP: return (EObject)createClazzToMethodMap();
 			case MiniJavaPackage.MODULO: return createModulo();
+			case MiniJavaPackage.NATIVE_EXPRESSION: return createNativeExpression();
 			default:
 				throw new IllegalArgumentException("The class '" + eClass.getName() + "' is not a valid classifier");
 		}
@@ -1026,6 +1027,16 @@ public class MiniJavaFactoryImpl extends EFactoryImpl implements MiniJavaFactory
 	public Modulo createModulo() {
 		ModuloImpl modulo = new ModuloImpl();
 		return modulo;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public NativeExpression createNativeExpression() {
+		NativeExpressionImpl nativeExpression = new NativeExpressionImpl();
+		return nativeExpression;
 	}
 
 	/**

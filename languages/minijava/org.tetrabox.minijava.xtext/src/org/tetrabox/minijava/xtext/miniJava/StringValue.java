@@ -16,8 +16,7 @@ package org.tetrabox.minijava.xtext.miniJava;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getStringValue()
- * @model annotation="aspect"
- *        annotation="RuntimeData"
+ * @model
  * @generated
  */
 public interface StringValue extends Value {

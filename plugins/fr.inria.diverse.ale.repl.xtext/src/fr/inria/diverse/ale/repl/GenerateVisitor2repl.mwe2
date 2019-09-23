@@ -38,15 +38,10 @@ Workflow {
 			    backtrack = true
 			  }
 			}
-			
+			formatter = {
+				generateStub = true
+			}
 			referencedResource = "platform:/resource/org.eclipse.emf.ecoretools.ale.xtext/model/generated/Ale.genmodel"
-			
-			/*
-			fragment = ecore2xtext.Ecore2XtextValueConverterServiceFragment2 auto-inject {}
-			
-			fragment = org.eclipse.xtext.generator.adapter.FragmentAdapter {
-				fragment = org.eclipse.xtext.generator.ecore2xtext.FormatterFragment {}
-			}*/
 		}
 	}
 }

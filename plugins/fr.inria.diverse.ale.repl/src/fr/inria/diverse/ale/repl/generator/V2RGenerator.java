@@ -71,8 +71,10 @@ public class V2RGenerator {
 	}
 	
 	public URI generateV2R(String v2rPath) {
-		URI ecoreUri = URI.createFileURI(ecorePath);
-		URI aleUri = URI.createFileURI(alePath);
+		URI ecoreUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
+				.getRoot().getFileForLocation(new Path(this.ecorePath)).getFullPath().toString());
+		URI aleUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
+				.getRoot().getFileForLocation(new Path(this.alePath)).getFullPath().toString());
 		
 		ALEInterpreter interpreter = new ALEInterpreter();
 		Dsl environment = new Dsl(Arrays.asList(ecoreUri.toString()), Arrays.asList(alePath));	
@@ -105,7 +107,7 @@ public class V2RGenerator {
 			}
 		});
 		Model v2rModel = Visitor2replFactory.eINSTANCE.createModel();
-		v2rModel.getPackages().addAll(ecorePackages);
+		v2rModel.setImportURI(ecoreUri.toString());
 			
 		// Find the class that contains the init method
 		BehavioredClass entryPointClass = unit.getXtendedClasses().stream()
@@ -227,7 +229,7 @@ public class V2RGenerator {
 		
 		REPL v2rTransformation = Visitor2replFactory.eINSTANCE.createREPL();
 		v2rTransformation.setInterpreter(v2rInterpreter);
-		v2rTransformation.setModel(v2rModel);
+		v2rTransformation.getModel().add(v2rModel);
 		v2rTransformation.getInstructions().addAll(instructions);
 		v2rResource.getContents().add(v2rTransformation);
 		

@@ -56,6 +56,7 @@ import org.tetrabox.minijava.xtext.miniJava.Minus;
 import org.tetrabox.minijava.xtext.miniJava.Modulo;
 import org.tetrabox.minijava.xtext.miniJava.Multiplication;
 import org.tetrabox.minijava.xtext.miniJava.NamedElement;
+import org.tetrabox.minijava.xtext.miniJava.NativeExpression;
 import org.tetrabox.minijava.xtext.miniJava.Neg;
 import org.tetrabox.minijava.xtext.miniJava.NewArray;
 import org.tetrabox.minijava.xtext.miniJava.NewCall;
@@ -658,6 +659,13 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	private EClass nativeExpressionEClass = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	private EEnum accessLevelEEnum = null;
 
 	/**
@@ -759,16 +767,6 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 	@Override
 	public EReference getProgram_Classes() {
 		return (EReference)programEClass.getEStructuralFeatures().get(2);
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	@Override
-	public EReference getProgram_State() {
-		return (EReference)programEClass.getEStructuralFeatures().get(3);
 	}
 
 	/**
@@ -2666,6 +2664,24 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public EClass getNativeExpression() {
+		return nativeExpressionEClass;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getNativeExpression_Value() {
+		return (EAttribute)nativeExpressionEClass.getEStructuralFeatures().get(0);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	@Override
 	public EEnum getAccessLevel() {
 		return accessLevelEEnum;
@@ -2704,7 +2720,6 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 		createEAttribute(programEClass, PROGRAM__NAME);
 		createEReference(programEClass, PROGRAM__IMPORTS);
 		createEReference(programEClass, PROGRAM__CLASSES);
-		createEReference(programEClass, PROGRAM__STATE);
 
 		importEClass = createEClass(IMPORT);
 		createEAttribute(importEClass, IMPORT__IMPORTED_NAMESPACE);
@@ -2973,6 +2988,9 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 		createEReference(moduloEClass, MODULO__LEFT);
 		createEReference(moduloEClass, MODULO__RIGHT);
 
+		nativeExpressionEClass = createEClass(NATIVE_EXPRESSION);
+		createEAttribute(nativeExpressionEClass, NATIVE_EXPRESSION__VALUE);
+
 		// Create enums
 		accessLevelEEnum = createEEnum(ACCESS_LEVEL);
 	}
@@ -3068,13 +3086,13 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 		objectRefValueEClass.getESuperTypes().add(this.getValue());
 		arrayRefValueEClass.getESuperTypes().add(this.getValue());
 		moduloEClass.getESuperTypes().add(this.getExpression());
+		nativeExpressionEClass.getESuperTypes().add(this.getExpression());
 
 		// Initialize classes, features, and operations; add parameters
 		initEClass(programEClass, Program.class, "Program", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 		initEAttribute(getProgram_Name(), ecorePackage.getEString(), "name", null, 0, 1, Program.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEReference(getProgram_Imports(), this.getImport(), null, "imports", null, 0, -1, Program.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEReference(getProgram_Classes(), this.getTypeDeclaration(), null, "classes", null, 0, -1, Program.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
-		initEReference(getProgram_State(), this.getState(), null, "state", null, 0, 1, Program.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_COMPOSITE, IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 
 		initEClass(importEClass, Import.class, "Import", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 		initEAttribute(getImport_ImportedNamespace(), ecorePackage.getEString(), "importedNamespace", null, 0, 1, Import.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
@@ -3342,6 +3360,9 @@ public class MiniJavaPackageImpl extends EPackageImpl implements MiniJavaPackage
 		initEClass(moduloEClass, Modulo.class, "Modulo", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 		initEReference(getModulo_Left(), this.getExpression(), null, "left", null, 0, 1, Modulo.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEReference(getModulo_Right(), this.getExpression(), null, "right", null, 0, 1, Modulo.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+
+		initEClass(nativeExpressionEClass, NativeExpression.class, "NativeExpression", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
+		initEAttribute(getNativeExpression_Value(), ecorePackage.getEString(), "value", null, 0, 1, NativeExpression.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 
 		// Initialize enums and add enum literals
 		initEEnum(accessLevelEEnum, AccessLevel.class, "AccessLevel");

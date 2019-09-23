@@ -386,6 +386,10 @@ public class MiniJavaAdapterFactory extends AdapterFactoryImpl {
 				return createModuloAdapter();
 			}
 			@Override
+			public Adapter caseNativeExpression(NativeExpression object) {
+				return createNativeExpressionAdapter();
+			}
+			@Override
 			public Adapter defaultCase(EObject object) {
 				return createEObjectAdapter();
 			}
@@ -1508,6 +1512,20 @@ public class MiniJavaAdapterFactory extends AdapterFactoryImpl {
 	 * @generated
 	 */
 	public Adapter createModuloAdapter() {
+		return null;
+	}
+
+	/**
+	 * Creates a new adapter for an object of class '{@link org.tetrabox.minijava.xtext.miniJava.NativeExpression <em>Native Expression</em>}'.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null so that we can easily ignore cases;
+	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @see org.tetrabox.minijava.xtext.miniJava.NativeExpression
+	 * @generated
+	 */
+	public Adapter createNativeExpressionAdapter() {
 		return null;
 	}
 

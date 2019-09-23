@@ -4,7 +4,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -12,25 +16,57 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.eclipse.debug.internal.core.LaunchConfiguration;
+
+import org.eclipse.acceleo.query.runtime.IService;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EOperation;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.Resource.Diagnostic;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecoretools.ale.ALEInterpreter;
+import org.eclipse.emf.ecoretools.ale.core.interpreter.services.EvalBodyService;
+import org.eclipse.emf.ecoretools.ale.core.interpreter.services.ServiceCallListener;
 import org.eclipse.emf.ecoretools.ale.core.parser.Dsl;
 import org.eclipse.emf.ecoretools.ale.core.parser.DslBuilder;
 import org.eclipse.emf.ecoretools.ale.core.parser.visitor.ParseResult;
 import org.eclipse.emf.ecoretools.ale.implementation.ExtendedClass;
 import org.eclipse.emf.ecoretools.ale.implementation.Method;
 import org.eclipse.emf.ecoretools.ale.implementation.ModelUnit;
+import org.eclipse.emf.edit.domain.EditingDomain;
+import org.eclipse.emf.transaction.RecordingCommand;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gemoc.ale.interpreted.engine.debug.AleDynamicAccessor;
+import org.eclipse.gemoc.commons.eclipse.emf.EMFResource;
+import org.eclipse.gemoc.execution.sequential.javaengine.K3RunConfiguration;
+import org.eclipse.gemoc.execution.sequential.javaengine.SequentialModelExecutionContext;
+import org.eclipse.gemoc.executionframework.engine.core.CommandExecution;
+import org.eclipse.gemoc.trace.commons.model.trace.GenericMSE;
+import org.eclipse.gemoc.trace.commons.model.trace.MSE;
+import org.eclipse.gemoc.trace.commons.model.trace.MSEModel;
+import org.eclipse.gemoc.trace.commons.model.trace.Step;
+import org.eclipse.gemoc.trace.commons.model.trace.TraceFactory;
+import org.eclipse.gemoc.trace.gemoc.api.IMultiDimensionalTraceAddon;
+import org.eclipse.gemoc.trace.gemoc.api.ITraceConstructor;
+import org.eclipse.gemoc.trace.gemoc.traceaddon.AbstractTraceAddon;
+import org.eclipse.gemoc.trace.gemoc.traceaddon.GenericTraceEngineAddon;
+import org.eclipse.gemoc.xdsmlframework.api.engine_addon.modelchangelistener.BatchModelChangeListener;
 import org.eclipse.sirius.common.tools.api.resource.ResourceSetFactory;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.diagnostics.Severity;
 import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.resource.impl.ChunkedResourceDescriptions;
+import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.validation.CheckMode;
 import org.eclipse.xtext.validation.Issue;
+
+import com.google.common.collect.HashBiMap;
 
 public class REPLInterpreter {
 	
@@ -95,6 +131,7 @@ public class REPLInterpreter {
 		return this.errors;
 	}
 	
+	//private GenericTraceEngineAddon traceAddon;
 	
 	private void init() {		
 		this.interpreter = new ALEInterpreter();
@@ -105,6 +142,9 @@ public class REPLInterpreter {
 		this.resourceSetFactory = ResourceSetFactory.createFactory();
 		this.mainResourceSet = this.resourceSetFactory.createResourceSet(modelUri);
 		this.mainResourceSet.getLoadOptions().put("org.eclipse.xtext.scoping.LIVE_SCOPE", false);
+		this.mainResourceSet.eAdapters()
+				.add(new ChunkedResourceDescriptions.ChunkedResourceDescriptionsAdapter(
+						new ChunkedResourceDescriptions()));
 
 		this.mainResource = this.mainResourceSet.createResource(modelUri);
 		try {
@@ -113,11 +153,56 @@ public class REPLInterpreter {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			return;
-		}	
+		}
 		
 		this.caller = this.mainResource.getContents().get(0);
 		this.parsedSemantics = new DslBuilder(this.interpreter.getQueryEnvironment(), this.mainResourceSet)
 				.parse(this.environment);
+
+		TransactionalEditingDomain.Factory.INSTANCE.createEditingDomain(this.mainResourceSet);
+		
+	/*	this.traceAddon = new GenericTraceEngineAddon();
+		
+		this.traceAddon.setDynamicPartAccessor(new AleDynamicAccessor(interpreter, 
+				this.parsedSemantics.stream().map(p -> p.getRoot())
+						.filter(elem -> elem != null).collect(Collectors.toList())));
+		this.traceAddon.initEngine(this.mainResource);
+		
+		if (this.interpreter != null && this.parsedSemantics != null) {
+			this.interpreter.addListener(new ServiceCallListener() {
+				private Deque<Step<?>> steps = new ArrayDeque<>();
+				
+				@Override
+				public void preCall(IService service, Object[] arguments) {
+					if(service instanceof EvalBodyService) {
+						boolean isStep = ((EvalBodyService)service).getImplem().getTags().contains("step");
+						if(isStep) {
+							//System.out.println("STEP IN");
+							if (arguments[0] instanceof EObject) {
+								EObject currentCaller = (EObject) arguments[0];
+								String className = currentCaller.eClass().getName();
+								String methodName = service.getName();
+								MSE mse = findOrCreateMSE(caller, className, methodName);
+								Step<?> step = traceAddon.getFactory().createStep(mse, new ArrayList<>(), new ArrayList<>());
+								traceAddon.aboutToExecuteStep(null, step);
+								this.steps.push(step);
+								traceAddon.getTraceConstructor().save();
+							}
+						}
+					}
+				}
+				
+				@Override
+				public void postCall(IService service, Object[] arg1, Object arg2) {
+					if(service instanceof EvalBodyService) {
+						boolean isStep = ((EvalBodyService)service).getImplem().getTags().contains("step");
+						if(isStep) {
+							traceAddon.stepExecuted(null, this.steps.pop());
+						}
+					}
+				}
+			});
+		}*/
 		
 		// Search the root class in the parsed semantics
 		List<ExtendedClass> classes = this.parsedSemantics.stream().map(p -> p.getRoot()).filter(e -> e != null)
@@ -196,15 +281,22 @@ public class REPLInterpreter {
 		EStructuralFeature instructionFeature = this.caller.eClass().getEStructuralFeature("instruction");
 		EStructuralFeature previousFeature = newInstruction.eClass().getEStructuralFeature("previous");
 		if (newInstruction != null) {
-			newInstruction.eSet(previousFeature, this.caller.eGet(instructionFeature));
+			TransactionalEditingDomain ed = TransactionUtil.getEditingDomain(this.mainResourceSet);
+			RecordingCommand command = new RecordingCommand(ed, "") {
+				@Override
+				protected void doExecute() {
+					try {
+						newInstruction.eSet(previousFeature, caller.eGet(instructionFeature));
+					} catch (Throwable t) {
+						t.printStackTrace();
+					}
+				}
+			};
+			CommandExecution.execute(ed, command);
 		}
+		
 		EcoreUtil2.resolveAll(resource);
 		
-		// Validate the resource
-		List<Issue> validationErrors = ((XtextResource) resource).getResourceServiceProvider()
-				.getResourceValidator().validate(resource, CheckMode.ALL, null).stream()
-				.filter(i -> i.getSeverity().equals(Severity.ERROR)).collect(Collectors.toList());
-			
 		// Print parsing errors after resolution and exit if any
 		if (resource.getErrors().size() > 0) {
 			for (Diagnostic error : resource.getErrors()) {				
@@ -214,6 +306,11 @@ public class REPLInterpreter {
 			return false;
 		}
 		
+		// Validate the resource
+		List<Issue> validationErrors = ((XtextResource) resource).getResourceServiceProvider()
+				.getResourceValidator().validate(resource, CheckMode.ALL, null).stream()
+				.filter(i -> i.getSeverity().equals(Severity.ERROR)).collect(Collectors.toList());
+					
 		// Print validation errors if any
 		if (!validationErrors.isEmpty()) {
 			for (Issue issue : validationErrors) {
@@ -225,7 +322,18 @@ public class REPLInterpreter {
 		}
 		
 		// Get the caller from the main resource
-		this.caller.eSet(instructionFeature, resource.getContents().get(0));
+		TransactionalEditingDomain ed = TransactionUtil.getEditingDomain(this.mainResourceSet);
+		RecordingCommand command = new RecordingCommand(ed, "") {
+			@Override
+			protected void doExecute() {
+				try {
+					caller.eSet(instructionFeature, resource.getContents().get(0));
+				} catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
+		};
+		CommandExecution.execute(ed, command);
 		
 		// Search the root class in the parsed semantics
 		List<ExtendedClass> classes = this.parsedSemantics.stream().map(p -> p.getRoot()).filter(e -> e != null)
@@ -264,4 +372,102 @@ public class REPLInterpreter {
 		return true;
 	}
 
+
+	private EOperation findOperation(EObject object, String className, String methodName) {
+		// We try to find the corresponding EOperation in the execution
+		// metamodel
+		for (EOperation operation : object.eClass().getEAllOperations()) {
+			// TODO !!! this is not super correct yet as overloading allows the
+			// definition of 2 methods with the same name !!!
+			if (operation.getName().equalsIgnoreCase(methodName)) {
+				return operation;
+			}
+		}
+
+		// If we didn't find it, we try to find the class that should contain
+		// this operation
+		EClass containingEClass = null;
+		if (object.eClass().getName().equalsIgnoreCase(className)) {
+			containingEClass = object.eClass();
+		} else {
+			for (EClass candidate : object.eClass().getEAllSuperTypes()) {
+				if (candidate.getName().equalsIgnoreCase(className)) {
+					containingEClass = candidate;
+				}
+			}
+		}
+
+		// Then we create the missing operation (VERY approximatively)
+		EOperation operation = EcoreFactory.eINSTANCE.createEOperation();
+		if (containingEClass != null) {
+			containingEClass.getEOperations().add(operation);
+		}
+		operation.setName(methodName);
+		return operation;
+	}
+
+	private MSEModel _actionModel;
+	
+	/**
+	 * Find the MSE element for the triplet caller/className/MethodName in the model
+	 * of precalculated possible MSE. If it doesn't exist yet, create one and add it
+	 * to the model.
+	 * 
+	 * @param caller
+	 *            the caller object
+	 * @param className
+	 *            the class containing the method
+	 * @param methodName
+	 *            the name of the method
+	 * @return the retrieved or created MSE
+	 */
+	public final MSE findOrCreateMSE(EObject caller, String className, String methodName) {
+		EOperation operation = findOperation(caller, className, methodName);
+		// TODO Should be created/loaded before execution by analyzing the
+		// model?
+		if (_actionModel == null) {
+			_actionModel = TraceFactory.eINSTANCE.createMSEModel();
+		}
+
+		if (_actionModel != null) {
+			for (MSE existingMSE : _actionModel.getOwnedMSEs()) {
+				if (existingMSE.getCaller().equals(caller) && ((existingMSE.getAction() != null && existingMSE.getAction().equals(operation)) || (existingMSE.getAction() == null && operation == null))) {
+					// no need to create one, we already have it
+					return existingMSE;
+				}
+			}
+		}
+		// let's create a MSE
+		final GenericMSE mse = TraceFactory.eINSTANCE.createGenericMSE();
+		mse.setCallerReference(caller);
+		mse.setActionReference(operation);
+		if (operation != null)
+			mse.setName("MSE_" + caller.getClass().getSimpleName() + "_" + operation.getName());
+		else
+			mse.setName("MSE_" + caller.getClass().getSimpleName() + "_" + methodName);
+		// and add it for possible reuse
+		if (_actionModel != null) {
+
+			if (_actionModel.eResource() != null) {
+				TransactionUtil.getEditingDomain(_actionModel.eResource());
+				RecordingCommand command = new RecordingCommand(TransactionUtil.getEditingDomain(_actionModel.eResource()), "Saving new MSE ") {
+					@Override
+					protected void doExecute() {
+						_actionModel.getOwnedMSEs().add(mse);
+						try {
+							_actionModel.eResource().save(null);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				};
+				TransactionUtil.getEditingDomain(_actionModel.eResource()).getCommandStack().execute(command);
+			}
+		} else {
+			_actionModel.getOwnedMSEs().add(mse);
+		}
+		return mse;
+	}
+	
 }

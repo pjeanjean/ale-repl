@@ -12,14 +12,8 @@ Workflow {
 			project = StandardProjectConfig {
 				baseName = "org.tetrabox.minijava.xtext"
 				rootPath = rootPath
-				runtimeTest = {
-					enabled = true
-				}
 				eclipsePlugin = {
 					enabled = true
-				}
-				eclipsePluginTest = {
-					enabled = false
 				}
 				web = {
 					enabled = false

@@ -16,7 +16,6 @@
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute MiniJava.ecore#//Program/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference MiniJava.ecore#//Program/imports"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference MiniJava.ecore#//Program/classes"/>
-      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference MiniJava.ecore#//Program/state"/>
     </genClasses>
     <genClasses ecoreClass="MiniJava.ecore#//Import">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute MiniJava.ecore#//Import/importedNamespace"/>
@@ -265,6 +264,9 @@
     <genClasses ecoreClass="MiniJava.ecore#//Modulo">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference MiniJava.ecore#//Modulo/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference MiniJava.ecore#//Modulo/right"/>
+    </genClasses>
+    <genClasses ecoreClass="MiniJava.ecore#//NativeExpression">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute MiniJava.ecore#//NativeExpression/value"/>
     </genClasses>
   </genPackages>
 </genmodel:GenModel>

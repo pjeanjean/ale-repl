@@ -161,6 +161,7 @@ SelectionExpression returns Expression:
 	'(' (args+=Expression (',' args+=Expression)*)? ')'))*;
 
 TerminalExpression returns Expression:
+	{NativeExpression} "'''" value=STRING "'''" |
 	{StringConstant} value=STRING |
 	{IntConstant} value=INT |
 	{BoolConstant} value=('true' | 'false') |

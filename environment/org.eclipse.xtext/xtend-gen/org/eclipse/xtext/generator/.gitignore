@@ -4,3 +4,9 @@
 /IShouldGenerate.java
 /OutputConfigurationAdapter.java
 /URIBasedFileSystemAccess.java
+/.OutputConfigurationAdapter.java._trace
+/.URIBasedFileSystemAccess.java._trace
+/.FileSystemAccessQueue.java._trace
+/.FileSystemAccessRequest.java._trace
+/.GeneratorContext.java._trace
+/.IShouldGenerate.java._trace

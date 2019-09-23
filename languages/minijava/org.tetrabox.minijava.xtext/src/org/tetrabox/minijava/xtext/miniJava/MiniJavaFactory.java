@@ -706,6 +706,15 @@ public interface MiniJavaFactory extends EFactory {
 	Modulo createModulo();
 
 	/**
+	 * Returns a new object of class '<em>Native Expression</em>'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return a new object of class '<em>Native Expression</em>'.
+	 * @generated
+	 */
+	NativeExpression createNativeExpression();
+
+	/**
 	 * Returns the package supported by this factory.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->

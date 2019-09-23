@@ -21,7 +21,6 @@ import org.eclipse.emf.ecore.util.InternalEList;
 import org.tetrabox.minijava.xtext.miniJava.Import;
 import org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage;
 import org.tetrabox.minijava.xtext.miniJava.Program;
-import org.tetrabox.minijava.xtext.miniJava.State;
 import org.tetrabox.minijava.xtext.miniJava.TypeDeclaration;
 
 /**
@@ -35,7 +34,6 @@ import org.tetrabox.minijava.xtext.miniJava.TypeDeclaration;
  *   <li>{@link org.tetrabox.minijava.xtext.miniJava.impl.ProgramImpl#getName <em>Name</em>}</li>
  *   <li>{@link org.tetrabox.minijava.xtext.miniJava.impl.ProgramImpl#getImports <em>Imports</em>}</li>
  *   <li>{@link org.tetrabox.minijava.xtext.miniJava.impl.ProgramImpl#getClasses <em>Classes</em>}</li>
- *   <li>{@link org.tetrabox.minijava.xtext.miniJava.impl.ProgramImpl#getState <em>State</em>}</li>
  * </ul>
  *
  * @generated
@@ -80,16 +78,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 	 * @ordered
 	 */
 	protected EList<TypeDeclaration> classes;
-
-	/**
-	 * The cached value of the '{@link #getState() <em>State</em>}' reference.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @see #getState()
-	 * @generated
-	 * @ordered
-	 */
-	protected State state;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -165,46 +153,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 	 * @generated
 	 */
 	@Override
-	public State getState() {
-		if (state != null && state.eIsProxy()) {
-			InternalEObject oldState = (InternalEObject)state;
-			state = (State)eResolveProxy(oldState);
-			if (state != oldState) {
-				if (eNotificationRequired())
-					eNotify(new ENotificationImpl(this, Notification.RESOLVE, MiniJavaPackage.PROGRAM__STATE, oldState, state));
-			}
-		}
-		return state;
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	public State basicGetState() {
-		return state;
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	@Override
-	public void setState(State newState) {
-		State oldState = state;
-		state = newState;
-		if (eNotificationRequired())
-			eNotify(new ENotificationImpl(this, Notification.SET, MiniJavaPackage.PROGRAM__STATE, oldState, state));
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	@Override
 	public NotificationChain eInverseRemove(InternalEObject otherEnd, int featureID, NotificationChain msgs) {
 		switch (featureID) {
 			case MiniJavaPackage.PROGRAM__IMPORTS:
@@ -229,9 +177,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 				return getImports();
 			case MiniJavaPackage.PROGRAM__CLASSES:
 				return getClasses();
-			case MiniJavaPackage.PROGRAM__STATE:
-				if (resolve) return getState();
-				return basicGetState();
 		}
 		return super.eGet(featureID, resolve, coreType);
 	}
@@ -256,9 +201,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 				getClasses().clear();
 				getClasses().addAll((Collection<? extends TypeDeclaration>)newValue);
 				return;
-			case MiniJavaPackage.PROGRAM__STATE:
-				setState((State)newValue);
-				return;
 		}
 		super.eSet(featureID, newValue);
 	}
@@ -280,9 +222,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 			case MiniJavaPackage.PROGRAM__CLASSES:
 				getClasses().clear();
 				return;
-			case MiniJavaPackage.PROGRAM__STATE:
-				setState((State)null);
-				return;
 		}
 		super.eUnset(featureID);
 	}
@@ -301,8 +240,6 @@ public class ProgramImpl extends MinimalEObjectImpl.Container implements Program
 				return imports != null && !imports.isEmpty();
 			case MiniJavaPackage.PROGRAM__CLASSES:
 				return classes != null && !classes.isEmpty();
-			case MiniJavaPackage.PROGRAM__STATE:
-				return state != null;
 		}
 		return super.eIsSet(featureID);
 	}

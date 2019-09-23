@@ -19,7 +19,7 @@ import org.eclipse.emf.ecore.EObject;
  * </ul>
  *
  * @see org.tetrabox.minijava.xtext.miniJava.MiniJavaPackage#getOutputStream()
- * @model annotation="aspect"
+ * @model
  * @generated
  */
 public interface OutputStream extends EObject {
