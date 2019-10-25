@@ -1,5 +1,7 @@
 package fr.inria.diverse.ale.repl.generator;
 
+import java.util.Arrays;
+
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
@@ -9,14 +11,14 @@ public class REPLGenerator {
 	
 	private String v2rPath;
 	private String ecorePath;
-	private String alePath;
+	private String alePaths[];
 	private String xtextPath; 
 
 	
-	public REPLGenerator(String v2rPath, String ecorePath, String alePath, String xtextPath) {
+	public REPLGenerator(String v2rPath, String ecorePath, String alePaths[], String xtextPath) {
 		this.v2rPath = v2rPath;
 		this.ecorePath = ecorePath;
-		this.alePath = alePath;
+		this.alePaths = alePaths;
 		this.xtextPath = xtextPath;
 	}
 	
@@ -27,8 +29,10 @@ public class REPLGenerator {
 		baseName += "." + languageName.toLowerCase();
 		URI ecoreBaseUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
 				.getRoot().getFileForLocation(new Path(this.ecorePath)).getFullPath().toString());
-		URI aleBaseUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
-				.getRoot().getFileForLocation(new Path(this.alePath)).getFullPath().toString());
+		URI aleBaseUris[] = Arrays.stream(this.alePaths)
+				.map(p -> URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
+						.getRoot().getFileForLocation(new Path(p)).getFullPath().toString()))
+				.toArray(URI[]::new);
 		AbstractSyntaxGenerator asGenerator = new AbstractSyntaxGenerator(this.ecorePath, this.v2rPath);
 		IProject asProject = asGenerator.createProject(baseName + ".model");
 		URI ecoreUri = asGenerator.generateEcore(asProject.getName(), languageName);
@@ -45,16 +49,26 @@ public class REPLGenerator {
 				.replaceAll("ecore$", "genmodel")));
 		csGenerator.createScope(csProject.getName(), languageName);
 
-		SemanticGenerator semGenerator = new SemanticGenerator(this.alePath, this.v2rPath);
+		SemanticGenerator semGenerator = new SemanticGenerator(this.alePaths, this.v2rPath);
 		URI generatedAleUri = URI.createURI(generatedEcoreUri.toString().replaceAll("ecore$", "ale"));
+		URI aleUris[] = new URI[aleBaseUris.length + 1];
+		aleUris[0] = generatedAleUri;
+		for (int i = 0; i < aleBaseUris.length; i++) {
+			aleUris[i+1] = aleBaseUris[i];
+		}
 		semGenerator.createDsl(csProject.getName(), languageName, new URI[] {generatedEcoreUri, ecoreBaseUri},
-				new URI[] {generatedAleUri, aleBaseUri});
+				aleUris);
 		semGenerator.generateAle(generatedEcoreUri, ecoreBaseUri);
 		
 		LSPServerGenerator lspServerGenerator = new LSPServerGenerator(csProject.getName(), languageName);
 		String lspProjectName = lspServerGenerator.generateProject().getName();
 		lspServerGenerator.generateSetupClass(lspProjectName);
 		lspServerGenerator.generateServerClass(lspProjectName);
+		
+		NotebookKernelGenerator kernelGenerator = new NotebookKernelGenerator(baseName, languageName);
+		String kernelProjectName = kernelGenerator.generateProject().getName();
+		kernelGenerator.generateServerClass(kernelProjectName);
+		kernelGenerator.generateKernelFile(kernelProjectName);
 	}
 	
 }

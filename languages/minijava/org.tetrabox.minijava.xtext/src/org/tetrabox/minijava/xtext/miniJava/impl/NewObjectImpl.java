@@ -81,7 +81,6 @@ public class NewObjectImpl extends ExpressionImpl implements NewObject {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Clazz getType() {
 		if (type != null && type.eIsProxy()) {
 			InternalEObject oldType = (InternalEObject)type;
@@ -108,7 +107,6 @@ public class NewObjectImpl extends ExpressionImpl implements NewObject {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setType(Clazz newType) {
 		Clazz oldType = type;
 		type = newType;
@@ -121,7 +119,6 @@ public class NewObjectImpl extends ExpressionImpl implements NewObject {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<Expression> getArgs() {
 		if (args == null) {
 			args = new EObjectContainmentEList<Expression>(Expression.class, this, MiniJavaPackage.NEW_OBJECT__ARGS);

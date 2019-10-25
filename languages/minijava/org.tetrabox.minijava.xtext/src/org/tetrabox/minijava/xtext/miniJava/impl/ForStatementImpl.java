@@ -97,7 +97,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Assignment getDeclaration() {
 		return declaration;
 	}
@@ -122,7 +121,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setDeclaration(Assignment newDeclaration) {
 		if (newDeclaration != declaration) {
 			NotificationChain msgs = null;
@@ -142,7 +140,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getCondition() {
 		return condition;
 	}
@@ -167,7 +164,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setCondition(Expression newCondition) {
 		if (newCondition != condition) {
 			NotificationChain msgs = null;
@@ -187,7 +183,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Assignment getProgression() {
 		return progression;
 	}
@@ -212,7 +207,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setProgression(Assignment newProgression) {
 		if (newProgression != progression) {
 			NotificationChain msgs = null;
@@ -232,7 +226,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Block getBlock() {
 		return block;
 	}
@@ -257,7 +250,6 @@ public class ForStatementImpl extends StatementImpl implements ForStatement {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setBlock(Block newBlock) {
 		if (newBlock != block) {
 			NotificationChain msgs = null;

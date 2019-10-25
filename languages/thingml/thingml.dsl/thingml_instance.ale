@@ -1,0 +1,369 @@
+behavior thingml_instance;
+
+open class Type {
+	@repl
+	def void doNothing() {
+		
+	}
+}
+
+open class Protocol {
+	@repl
+	def void doNothing() {
+		
+	}
+}
+
+open class Instance {
+	thingml_dynamic::DynamicInstance dynamicInstance;
+	boolean running;
+	Sequence(thingml::Expression) index_list;
+
+	def void initProperties(thingML::Thing thing) {
+		for (fragment in thing.includes) {
+			self.initProperties(fragment);
+		}
+		for (property in thing.properties) {
+			thingml_dynamic::DynamicVariable entry := thingml_dynamic::DynamicVariable.create();
+			entry.variable := property;
+			if (property.typeRef.isArray) {
+				thingml_dynamic::Value length_value := property.typeRef.cardinality.value(self.dynamicInstance, true);
+				if (length_value.isProxy) {
+					entry.value := thingml_dynamic::Value.create();
+					entry.value.setProxyValue();
+					entry.value.proxyValue := property.typeRef.cardinality;
+				} else {
+					if (length_value.isInteger) {
+						entry.value := thingml_dynamic::Value.create();
+						entry.value.setArray();
+						int length := length_value.integerValue;
+						int i := 1;
+						while (i <= length) {
+							Value newValue := thingml_dynamic::Value.create();
+							newValue.setNull();
+							entry.value.arrayValues += newValue;
+							i := i + 1;
+						}
+					} else {
+						'EXCEPTION: Cardinality has to be an IntegerValue'.log();
+					}
+				}
+			} else {
+				if (property.init = null) {
+					entry.value := thingml_dynamic::Value.create();
+					entry.value.setNull();
+				} else {
+					entry.value := property.init.value(self.dynamicInstance, true);
+				}
+			}
+			self.dynamicInstance.dynamicProperties += entry;
+		}
+	}
+
+	@step
+	def void _assignProperties(thingML::Property property, thingML::Expression init) {
+		thingml_dynamic::DynamicVariable entry := self.dynamicInstance.getDynamicVariable(property);
+		if (self.index_list->size() = 0) {
+			entry.value := init.value(self.dynamicInstance, true);
+		} else {
+			if (self.index_list->size() = 1) {
+				thingML::Expression index_exp := self.index_list->at(1);
+				if (entry.value.isArrayProxy) {
+					thingml_dynamic::Value array_proxy := entry.value;
+					Sequence(thingml_dynamic::ArrayProxyEntry) candidate_entries :=
+							array_proxy.arrayProxyValues->select(e | e.indexExpression = index_exp);
+					if (candidate_entries->size() = 1) {
+						candidate_entries->at(1).value := init.value(self.dynamicInstance, true);
+					} else {
+						if (candidate_entries->size() = 0) {
+							thingml_dynamic::ArrayProxyEntry proxy_entry := thingml_dynamic::ArrayProxyEntry.create();
+							proxy_entry.indexExpression := index_exp;
+							proxy_entry.value := init.value(self.dynamicInstance, true);
+							array_proxy.arrayProxyValues += proxy_entry;
+							array_proxy.arrayProxyValues->size();
+						} else {
+							'EXCEPTION: Wut?'.log();
+						}
+					}
+				} else {
+					thingml_dynamic::Value array_property := entry.value;
+					thingml_dynamic::Value index_value := index_exp.value(self.dynamicInstance, true);
+					if (index_value.isProxy) {
+						// TODO
+						'EXCEPTION: I don\'t know what to do'.log();
+					} else {
+						if (index_value.isInteger) {
+							int index := index_value.integerValue;
+							thingml_dynamic::Value value := init.value(self.dynamicInstance, true);
+							array_property.values := array_property.arrayValues->insertAt(index, value);
+						} else {
+							'EXCEPTION: Cardinality has to be an IntegerValue'.log();
+						}
+					}
+				}
+			} else {
+				'EXCEPTION: I don\'t understand this language...'.log();
+			}
+		}
+	}
+
+	def void initPropertyAssigns(thingML::Thing thing) {
+		for (fragment in thing.includes) {
+			self.initPropertyAssigns(fragment);
+		}
+		for (assign in thing.assign) {
+			self.index_list := assign.index;
+			self._assignProperties(assign.property, assign.init);
+		}
+	}
+
+	def thingML::CompositeState getBehaviour() {
+		thingML::CompositeState behaviour := self.type.behaviour;
+		for (i in self.type.includes) {
+			if (behaviour = null) {
+				behaviour := i.behaviour;
+			}
+		}
+		if (behaviour = null) {
+			('EXCEPTION: Instance ' + self.name + ' doesn\'t have any behaviour!').log();
+		}
+		result := behaviour;
+	}
+
+	def void initStateContainers(thingML::CompositeState compositeState) {
+		thingml_dynamic::DynamicCompositeState entry := thingml_dynamic::DynamicCompositeState.create();
+		entry.compositeState := compositeState;
+		entry.currentState := null;
+		self.dynamicInstance.dynamicCompositeStates += entry;
+		for (sub_state in compositeState.substate) {
+			if (sub_state.oclIsKindOf(thingML::CompositeState)) {
+				self.initStateContainers(sub_state);
+			}
+		}
+	}
+
+	def void initPorts(thingML::Thing thing) {
+		for (fragment in thing.includes) {
+			self.initPorts(fragment);
+		}
+		for (port in thing.ports) {
+			thingml_dynamic::DynamicPort dynamicPort := thingml_dynamic::DynamicPort.create();
+			dynamicPort.port := port;
+			self.dynamicInstance.dynamicPorts += dynamicPort;
+		}
+	}
+
+	def void init() {
+		self.running := true;
+		thingml_dynamic::DynamicInstance dynInstance := thingml_dynamic::DynamicInstance.create();
+		self.dynamicInstance := dynInstance;
+		self.dynamicInstance.init(self);
+		self.initProperties(self.type);
+		self.initPropertyAssigns(self.type);
+		self.initStateContainers(self.getBehaviour());
+		self.initPorts(self.type);
+	}
+
+	def void assign(thingML::ConfigPropertyAssign assign) {
+		self.index_list := assign.index;
+		self._assignProperties(assign.property, assign.init);
+	}
+
+	def void resolve() {
+		('LOG: ' + self.name + ': Start resolution').log();
+
+		int proxy_counter := 0;
+		int proxy_resolved := 0;
+
+		for (dynamicProperty in self.dynamicInstance.dynamicProperties) {
+
+			if (dynamicProperty.value.isArrayProxy) {
+				thingml_dynamic::Value array_proxy := dynamicProperty.value;
+
+				('LOG: Entering ArrayProxyValue of property "' + dynamicProperty.variable.name + '"').log();
+				proxy_counter := proxy_counter + 1;
+
+				thingml_dynamic::Value cardinality := array_proxy.proxyValue.value(self.dynamicInstance, false);
+
+				boolean continue := not cardinality.isProxy;
+
+				if (continue) {
+					'LOG: Cardinality is not a Proxy anymore!'.log();
+
+					for (array_entry in array_proxy.arrayProxyValues) {
+						thingml_dynamic::Value index := array_entry.indexExpression.value(self.dynamicInstance, false);
+						continue := continue and not index.isProxy;
+					}
+				}
+
+				if (continue) {
+					'LOG: All indexes have been resolved!'.log();
+					proxy_resolved := proxy_resolved + 1;
+
+					if (cardinality.isInteger) {
+						thingml_dynamic::Value new_value := thingml_dynamic::Value.create();
+						new_value.setArray();
+						int length := cardinality.integerValue;
+						int i := 1;
+						while (i <= length) {
+							thingml_dynamic::Value nullValue := thingml_dynamic::Value.create();
+							nullValue.setNull();
+							new_value.arrayValues += nullValue;
+							i := i + 1;
+						}
+						for (array_entry in array_proxy.arrayProxyValues) {
+							int index := array_entry.indexExpression.value(self.dynamicInstance, false);
+							if (index.isInteger) {
+								new_value.arrayValues := new_value.arrayValues->insertAt(index.integerValue + 1, array_entry.value);
+								if (array_entry.value.isProxy) {
+									'LOG: Discovering a new ProxyValue!'.log();
+									proxy_counter := proxy_counter + 1;
+								}
+							} else {
+								'EXCEPTION: Index must be an integer'.log();
+							}
+						}
+
+						dynamicProperty.value := new_value;
+					} else {
+						'EXCEPTION: Cardinality has to be an IntegerValue"'.log();
+					}
+				}
+			} else {
+				if (dynamicProperty.value.isProxy) {
+					('LOG: Analysing ProxyValue of property "' + dynamicProperty.variable.name + '"').log();
+					proxy_counter := proxy_counter + 1;
+					thingml_dynamic::Value proxyValue := dynamicProperty.value;
+					dynamicProperty.value := proxyValue.proxyValue.value(self.dynamicInstance, false);
+					if (not dynamicProperty.isProxy) {
+						'LOG: It has been resolved'.log();
+						proxy_resolved := proxy_resolved + 1;
+					}
+				} else {
+					if (dynamicProperty.value.isArray) {
+						('LOG: Analysing ArrayValue of property "' + dynamicProperty.variable.name + '"').log();
+						int i := 0;
+						for (value in dynamicProperty.value.arrayValues) {
+							if (value.isProxy) {
+								('LOG: Entering ProxyValue of property "' + dynamicProperty.variable.name + '[' + i + ']"').log();
+								proxy_counter := proxy_counter + 1;
+								// TODO
+								'LOG: This is to be done'.log();
+							}
+							i := i + 1;
+						}
+					}
+				}
+			}
+		}
+
+		'LOG: Counters:'.log();
+		('LOG:  - proxies:  ' + proxy_counter).log();
+		('LOG:  - resolved: ' + proxy_resolved).log();
+
+		if (proxy_counter > 0) {
+			if (proxy_resolved = 0) {
+				'EXCEPTION: Cycle detected... See the variable view to understand. Good luck ;)'.log();
+			} else {
+				if (proxy_resolved < proxy_counter) {
+					self.resolve();
+				}
+			}
+		}
+
+		('LOG: ' + self.name + ': End resolution').log();
+	}
+
+	def void connect(Connector connector) {
+		thingml_dynamic::DynamicPort dynamicRequired := self.dynamicInstance.getDynamicPort(connector.required);
+		thingml_dynamic::DynamicPort dynamicProvided := connector.srv.dynamicInstance.getDynamicPort(connector.provided);
+		dynamicRequired.connectedPorts += dynamicProvided;
+		dynamicProvided.connectedPorts += dynamicRequired;
+	}
+
+	@step
+	def void enterInitialState() {
+		thingML::CompositeState compositeState := self.getBehaviour();
+		compositeState.onEntry(self.dynamicInstance);
+		while (compositeState != null) {
+			thingml_dynamic::DynamicCompositeState entry := self.dynamicInstance.getDynamicCompositeState(compositeState);
+			entry.currentState := compositeState.initial;
+			compositeState.initial.onEntry(self.dynamicInstance);
+			if (not compositeState.initial.oclIsKindOf(thingml_dynamic::CompositeState)) {
+				compositeState := null;
+			}
+		}
+	}
+
+	def boolean _hasMessage() {
+		boolean temp_result := false;
+		for (dynamicPort in self.dynamicInstance.dynamicPorts) {
+			if (dynamicPort.receivedMessages->notEmpty() and not temp_result) {
+				temp_result := true;
+			}
+		}
+		result := temp_result;
+	}
+
+	def thingml_dynamic::DynamicMessage _nextMessage() {
+		DynamicMessage temp_result := null;
+		for (dynamicPort in self.dynamicInstance.dynamicPorts) {
+			if (dynamicPort.receivedMessages->notEmpty() and temp_result = null) {
+				temp_result := dynamicPort.receivedMessages->at(1);
+				dynamicPort.receivedMessages -= temp_result;
+			}
+		}
+		if (temp_result = null) {
+			'EXCEPTION: Not possible'.log();
+		}
+		result := temp_result;
+	}
+
+	@step
+	def boolean run(boolean firstRun) {
+		thingML::CompositeState behaviour := self.getBehaviour();
+		boolean hasMoved := false;
+		boolean reRun := true;
+		boolean evaluateFirstRun := true;
+		while (reRun and self.running) {
+			boolean hasSpontaneouslyMoved := false;
+			if (evaluateFirstRun) {
+				hasSpontaneouslyMoved := firstRun;
+			} else {
+				hasSpontaneouslyMoved := true;
+			}
+			while (hasSpontaneouslyMoved and self.running) {
+				('LOG: ' + self.name + ': Run a spontaneous transition').log();
+				hasSpontaneouslyMoved := behaviour.runASpontaneousTransition(self.dynamicInstance);
+				hasMoved := hasMoved or hasSpontaneouslyMoved;
+			}
+			reRun := false;
+			while (not reRun and self._hasMessage() and self.running) {
+				thingml_dynamic::DynamicMessage dynamicMessage := self._nextMessage();
+
+				String params := '';
+				for (p in dynamicMessage.parameters) {
+					params := params + p._str() + ', ';
+				}
+				if (params->size() > 2) {
+					params := params.substring(1, params.size() - 2);
+				}
+				('LOG: ' + self.name + ': Manage message "' + dynamicMessage.message.name + '(' + params + ')"').log();
+
+				int i := 1;
+				while (i <= dynamicMessage.message.parameters->size()) {
+					thingML::Variable parameter := dynamicMessage.message.parameters->at(i);
+					thingml_dynamic::Value value := dynamicMessage.parameters->at(i).copy();
+					self.dynamicInstance.addVariable(parameter, value);
+					i := i + 1;
+				}
+				reRun := behaviour.runAEventDrivenTransition(self.dynamicInstance, dynamicMessage);
+				self.dynamicInstance.clearContext();
+
+				hasMoved := hasMoved or reRun;
+			}
+			evaluateFirstRun := false;
+		}
+		result := hasMoved;
+	}
+}

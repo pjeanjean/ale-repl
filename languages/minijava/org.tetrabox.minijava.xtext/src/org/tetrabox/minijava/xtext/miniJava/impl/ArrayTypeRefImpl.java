@@ -62,7 +62,6 @@ public class ArrayTypeRefImpl extends TypeRefImpl implements ArrayTypeRef {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public SingleTypeRef getTypeRef() {
 		return typeRef;
 	}
@@ -87,7 +86,6 @@ public class ArrayTypeRefImpl extends TypeRefImpl implements ArrayTypeRef {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setTypeRef(SingleTypeRef newTypeRef) {
 		if (newTypeRef != typeRef) {
 			NotificationChain msgs = null;

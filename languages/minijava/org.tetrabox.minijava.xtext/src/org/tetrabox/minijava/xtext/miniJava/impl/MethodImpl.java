@@ -139,7 +139,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public boolean isIsabstract() {
 		return isabstract;
 	}
@@ -149,7 +148,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setIsabstract(boolean newIsabstract) {
 		boolean oldIsabstract = isabstract;
 		isabstract = newIsabstract;
@@ -162,7 +160,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public boolean isIsstatic() {
 		return isstatic;
 	}
@@ -172,7 +169,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setIsstatic(boolean newIsstatic) {
 		boolean oldIsstatic = isstatic;
 		isstatic = newIsstatic;
@@ -185,7 +181,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<Parameter> getParams() {
 		if (params == null) {
 			params = new EObjectContainmentEList<Parameter>(Parameter.class, this, MiniJavaPackage.METHOD__PARAMS);
@@ -198,7 +193,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Block getBody() {
 		return body;
 	}
@@ -223,7 +217,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setBody(Block newBody) {
 		if (newBody != body) {
 			NotificationChain msgs = null;
@@ -243,7 +236,6 @@ public class MethodImpl extends MemberImpl implements Method {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<Map.Entry<Clazz, Method>> getCache() {
 		if (cache == null) {
 			cache = new EObjectResolvingEList<Map.Entry<Clazz, Method>>(Entry.class, this, MiniJavaPackage.METHOD__CACHE);

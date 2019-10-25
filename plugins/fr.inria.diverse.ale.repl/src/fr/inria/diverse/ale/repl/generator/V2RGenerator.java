@@ -61,23 +61,24 @@ public class V2RGenerator {
 
 	private String languageName;
 	private String ecorePath;
-	private String alePath;
+	private String alePaths[];
 	
 	
-	public V2RGenerator(String languageName, String ecorePath, String alePath) {
+	public V2RGenerator(String languageName, String ecorePath, String alePaths[]) {
 		this.languageName = languageName;
 		this.ecorePath = ecorePath;
-		this.alePath = alePath;
+		this.alePaths = alePaths;
 	}
 	
 	public URI generateV2R(String v2rPath) {
 		URI ecoreUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
 				.getRoot().getFileForLocation(new Path(this.ecorePath)).getFullPath().toString());
-		URI aleUri = URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace()
-				.getRoot().getFileForLocation(new Path(this.alePath)).getFullPath().toString());
+		URI aleUris[] = Arrays.stream(this.alePaths).map(p ->
+				URI.createURI("platform:/resource" + ResourcesPlugin.getWorkspace().getRoot()
+						.getFileForLocation(new Path(p)).getFullPath().toString())).toArray(URI[]::new);
 		
 		ALEInterpreter interpreter = new ALEInterpreter();
-		Dsl environment = new Dsl(Arrays.asList(ecoreUri.toString()), Arrays.asList(alePath));	
+		Dsl environment = new Dsl(Arrays.asList(ecoreUri.toString()), Arrays.asList(alePaths));	
 		
 		Injector aleInjector = Guice.createInjector(new AleRuntimeModule());
 		XtextResourceSet resourceSet = aleInjector.getInstance(XtextResourceSet.class);
@@ -88,12 +89,14 @@ public class V2RGenerator {
 		List<ParseResult<ModelUnit>> parsedSemantics = new DslBuilder(interpreter.getQueryEnvironment(),
 				resourceSet).parse(environment);
 		Resource ecoreResource = resourceSet.getResource(ecoreUri, true);
-		Resource aleResource = resourceSet.getResource(aleUri, true);
+		Resource aleResources[] = Arrays.stream(aleUris).map(u -> resourceSet.getResource(u, true))
+				.toArray(Resource[]::new);
 		
-		Unit unit = (Unit) aleResource.getContents().get(0);
+		Unit units[] = Arrays.stream(aleResources).map(r -> (Unit) r.getContents().get(0))
+				.toArray(Unit[]::new);
 		
 		// List methods annotated with the `@repl` tag in the referenced ale file
-		List<Method> steps = parsedSemantics.get(0).getRoot().eContents().stream()
+		List<Method> steps = parsedSemantics.stream().flatMap(s -> s.getRoot().eContents().stream())
 			.flatMap(obj -> obj.eContents().stream())
 			.filter(met -> (met instanceof Method)
 					&& ((Method) met).getTags().stream().anyMatch(t -> t.startsWith("repl")))
@@ -110,7 +113,7 @@ public class V2RGenerator {
 		v2rModel.setImportURI(ecoreUri.toString());
 			
 		// Find the class that contains the init method
-		BehavioredClass entryPointClass = unit.getXtendedClasses().stream()
+		BehavioredClass entryPointClass = Arrays.stream(units).flatMap(u -> u.getXtendedClasses().stream())
 				.filter(c -> c.getOperations().stream()
 						.anyMatch(o -> o.getTag().stream()
 								.anyMatch(t -> t.getName().equals("init")))).findFirst().get();
@@ -137,7 +140,7 @@ public class V2RGenerator {
 					.get().getEClassifier(aleEcoreClass.getName());
 			v2rInstruction.setClassifier(actualEcoreClass);
 			
-			BehavioredClass actualAleClass = unit.getXtendedClasses().stream()
+			BehavioredClass actualAleClass = Arrays.stream(units).flatMap(u -> u.getXtendedClasses().stream())
 					.filter(c -> c.getName().equals(aleExtendedClass.getName())).findFirst().get();
 			ICommentAssociater commentAssociater = aleInjector.getInstance(ICommentAssociater.class);
 			Map<ILeafNode, EObject> comments = commentAssociater.associateCommentsWithSemanticEObjects(

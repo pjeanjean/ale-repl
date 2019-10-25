@@ -31,6 +31,7 @@ import org.eclipse.debug.core.ILaunchesListener2;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
 import org.eclipse.emf.ecore.EEnum;
 import org.eclipse.emf.ecore.EEnumLiteral;
 import org.eclipse.emf.ecore.EPackage;
@@ -318,8 +319,12 @@ public class ConcreteSyntaxGenerator {
 					assignment.setOperator("=");
 					RuleCall ruleCall = XtextFactory.eINSTANCE.createRuleCall();
 					Optional<AbstractRule> rule = eRoot.getRules().stream()
-							.filter(r -> r.getType().getClassifier()
-									.equals(((EClass) c).getEStructuralFeatures().get(0).getEType()))
+							.filter(r -> {
+								EClassifier rc = r.getType().getClassifier();
+								EClassifier cc = ((EClass) c).getEStructuralFeatures().get(0).getEType();
+								return rc.getEPackage().getName().equals(cc.getEPackage().getName()) &&
+										rc.getName().equals(cc.getName());
+							})
 							.findFirst();
 					if (rule.isPresent()) {
 						ruleCall.setRule(rule.get());

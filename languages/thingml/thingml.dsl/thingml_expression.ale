@@ -1,0 +1,299 @@
+behavior thingml_expression;
+
+use java.lang.Math;
+
+open class thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		('EXCEPTION: Expression type ' + self + ' is not supported in semantics yet').log();
+	}
+
+	def String _str() {
+	}
+}
+
+open class thingML.FunctionCallExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		String params := '';
+		for (p in self.parameters) {
+			params := params + p._str() + ', ';
+		}
+		if (params.size() > 2) {
+			params := params.substring(1, params.size() - 2);
+		}
+		('LOG: Preparing function call: ' + self.function.name + '(' + params + ')').log();
+		Sequence(thingml_dynamic::Value) parameterValues := Sequence{};
+		for (p in self.parameters) {
+			parameterValues += p.value(dynamicInstance, false);
+		}
+		dynamicInstance.enterExecutionFrame(self.function.parameters, parameterValues);
+		('LOG: Execute function "' + self.function.name + '"').log();
+		self.function.body.execute(dynamicInstance);
+		result := dynamicInstance.leaveExecutionFrame();
+	}
+
+	def String _str() {
+		String params := '';
+		for (p in self.parameters) {
+			params += params + p._str() + ', ';
+		}
+		if (params.size() > 1) {
+			params := params.substring(1, params.size() - 2);
+		}
+		result := self.function.name + '(' + params + ')';
+	}
+}
+
+open class thingML.ExpressionGroup extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.term.value(dynamicInstance, createProxies);
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := '(' + self.term._str() + ')';
+	}
+}
+
+open class thingML.AndExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies)._and(self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' and ' + self.rhs._str();
+	}
+}
+
+open class thingML.PlusExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies)
+			.plus(self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' + ' + self.rhs._str();
+	}
+}
+
+open class thingML.MinusExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).minus(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' - ' + self.rhs._str();
+	}
+}
+
+open class thingML.TimesExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).times(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' x ' + self.rhs._str();
+	}
+}
+
+open class thingML.ModExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).modulo(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' % ' + self.rhs._str();
+	}
+}
+
+open class thingML.LowerExpression extends thingML.Expression {
+	def thingml_expression::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).lower(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' < ' + self.rhs._str();
+	}
+}
+
+open class thingML.GreaterExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).greater(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' > ' + self.rhs._str();
+	}
+}
+
+open class thingML.GreaterOrEqualExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).greaterOrEqual(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' >= ' + self.rhs._str();
+	}
+}
+
+open class thingML.LowerOrEqualExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).lowerOrEqual(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' <= ' + self.rhs._str();
+	}
+}
+
+open class thingML.EqualsExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).equal(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' == ' + self.rhs._str();
+	}
+}
+
+open class thingML.NotEqualsExpression extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value value := self.lhs.value(dynamicInstance, createProxies).notEqual(
+			self.rhs.value(dynamicInstance, createProxies));
+		if (value.isProxy) {
+			value.proxyValue := self;
+		}
+		result := value;
+	}
+
+	def String _str() {
+		result := self.lhs._str() + ' != ' + self.rhs._str();
+	}
+}
+
+open class thingML.IntegerLiteral extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value integerValue := thingml_dynamic::Value.create();
+		integerValue.setInteger();
+		integerValue.integerValue := self.intValue.toIntExact();
+		result := integerValue;
+	}
+
+	def String _str() {
+		result := '' + self.intValue;
+	}
+}
+
+open class thingML.StringLiteral extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value stringValue := thingml_dynamic::Value.create();
+		stringValue.setString();
+		stringValue.stringValue := self.stringValue;
+		result := stringValue;
+	}
+
+	def String _str() {
+		result := '"' + self.stringValue + '"';
+	}
+}
+
+open class thingML.ArrayIndex extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		thingml_dynamic::Value arrayValue := self.array.value(dynamicInstance, createProxies);
+		thingml_dynamic::Value indexValue := self.index.value(dynamicInstance, createProxies);
+		if (arrayValue.isProxy or indexValue.isProxy) {
+			thingml_dynamic::Value proxy := thingml_dynamic::Value.create();
+			proxy.setProxy();
+			proxy.proxyValue := self;
+			result := proxy;
+		} else if (not arrayValue.isArray) {
+			('EXCEPTION: Expression "' + self.array._str() + '" has to correspond to an Array').log();
+		} else if (not indexValue.isInteger) {
+			('EXCEPTION: Expression "' + self.index._str() + '" has to correspond to an Integer').log();
+		} else {
+			int index := indexValue.integerValue;
+			result := arrayValue.arrayValues->at(index+1).copy();
+		}
+	}
+
+	def String _str() {
+		result := self.array._str() + '[' + self.index._str() + ']';
+	}
+}
+
+open class thingML.PropertyReference extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		if (createProxies) {
+			thingml_dynamic::Value proxy := thingml_dynamic::Value.create();
+			proxy.setProxy();
+			proxy.proxyValue := self;
+			result := proxy;
+		} else {
+			result := dynamicInstance.getDynamicVariable(self.property).value.copy();
+		}
+	}
+
+	def String _str() {
+		result := self.property.name;
+	}
+}
+
+open class thingML.EventReference extends thingML.Expression {
+	def thingml_dynamic::Value value(thingml_dynamic::DynamicInstance dynamicInstance, boolean createProxies) {
+		result := dynamicInstance.getDynamicVariable(self.parameter).value.copy();
+	}
+
+	def String _str() {
+		result := self.receiveMsg.name + '.' + self.parameter.name;
+	}
+}

@@ -69,7 +69,6 @@ public class BooleanValueImpl extends ValueImpl implements BooleanValue {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public boolean isValue() {
 		return value;
 	}
@@ -79,7 +78,6 @@ public class BooleanValueImpl extends ValueImpl implements BooleanValue {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setValue(boolean newValue) {
 		boolean oldValue = value;
 		value = newValue;

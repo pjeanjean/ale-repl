@@ -61,7 +61,6 @@ public class ClassRefImpl extends SingleTypeRefImpl implements ClassRef {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public TypeDeclaration getReferencedClass() {
 		if (referencedClass != null && referencedClass.eIsProxy()) {
 			InternalEObject oldReferencedClass = (InternalEObject)referencedClass;
@@ -88,7 +87,6 @@ public class ClassRefImpl extends SingleTypeRefImpl implements ClassRef {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setReferencedClass(TypeDeclaration newReferencedClass) {
 		TypeDeclaration oldReferencedClass = referencedClass;
 		referencedClass = newReferencedClass;

@@ -105,6 +105,7 @@ class LSPServerGenerator {
 			 org.eclipse.xtext.ide,
 			 «xtextBasePackage»,
 			 «xtextBasePackage».ide
+			Export-Package: «xtextBasePackage».server
 		'''
 		
 		val metaInf = ResourcesPlugin.workspace.root.getProject(projectName).getFolder("META-INF")

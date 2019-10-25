@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -50,12 +51,12 @@ import fr.inria.diverse.ale.repl.visitor2repl.REPL;
 
 public class SemanticGenerator {
 	
-	private String alePath;
+	private String alePaths[];
 	private String v2rPath;
 	
 	
-	public SemanticGenerator(String alePath, String v2rPath) {
-		this.alePath = alePath;
+	public SemanticGenerator(String alePaths[], String v2rPath) {
+		this.alePaths = alePaths;
 		this.v2rPath = v2rPath;
 	}
 	
@@ -133,22 +134,23 @@ public class SemanticGenerator {
 		// Copy the existing ale file
 		java.nio.file.Path newAlePath = new File(ResourcesPlugin.getWorkspace().getRoot().getLocation().toString()
 							+ ecoreUri[0].toPlatformString(true).replaceAll("ecore$", "ale")).toPath();
-		try {
+		/*try {
 			Files.copy(new File(this.alePath).toPath(), newAlePath);
 		} catch (IOException e1) {
 			e1.printStackTrace();
-		}
+		}*/
 
 		for (URI uri : ecoreUri) {
 			rs.getResource(uri, true);
 		}
 		
-		Resource aleResource = rs.getResource(URI.createFileURI(this.alePath), true);
+		Resource aleResources[] = Arrays.stream(this.alePaths)
+				.map(p -> rs.getResource(URI.createFileURI(p), true)).toArray(Resource[]::new);
 		Resource newAleResource = rs.createResource(URI.createURI(ecoreUri[0].toString().replaceAll("ecore$", "ale")));
-		Unit unit = (Unit) aleResource.getContents().get(0);
+		Unit units[] = Arrays.stream(aleResources).map(r -> (Unit) r.getContents().get(0)).toArray(Unit[]::new);
 		Unit newUnit = AleFactory.eINSTANCE.createUnit();
 		
-		newUnit.setName(unit.getName() + "_repl");
+		newUnit.setName(newAleResource.getURI().lastSegment().replaceAll("\\.ale$", "") + "_behavior");
 		newAleResource.getContents().add(newUnit);
 		
 		Resource v2rResource = rs.getResource(URI.createURI("platform:/resource" + this.v2rPath), true);

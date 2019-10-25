@@ -1,0 +1,136 @@
+behavior thingml_state;
+
+open class State {
+	
+	Sequence(thingML::CompositeState) rootPath;
+	Sequence(thingML::CompositeState) pathToState;
+	
+	def void _getRootPath(thingML::State state) {
+		self.rootPath := Sequence{};
+		thingML::State parent := state.eContainer();
+		while (parent.oclIsKindOf(thingML::CompositeState)) {
+			self.rootPath := self.rootPath->insertAt(1, state.eContainer().oclAsType(thingML::CompositeState));
+			parent := parent.eContainer();
+		}
+	}
+
+	def void _getPathToState(thingml_dynamic::DynamicInstance dynamicInstance, thingML::State state1, thingML::State state2) {
+		thingML::CompositeState ancestor := null;
+		self._getRootPath(state1);
+		Sequence(thingml::CompositeState) path1 := self.rootPath;
+		self._getRootPath(state2);
+		self.pathToState := self.rootPath; 
+		while (path1->notEmpty() and self.rootPath->notEmpty() and (path1->at(1) = self.rootPath->at(1))) {
+			path1 -= path1->at(1);
+			ancestor := self.rootPath->at(1);
+			self.rootPath -= ancestor;
+		}
+		self.rootPath := self.rootPath->insertAt(1, ancestor);
+	}
+
+	def void _switchState(thingml_dynamic::DynamicInstance dynamicInstance, thingML::State newState) {
+		self._getPathToState(dynamicInstance, self, newState);
+		Sequence(thingml::CompositeState) ancestorToNewState := self.pathToState;
+		('LOG: Common ancestor is : ' + ancestorToNewState->at(1).name).log();
+		thingML::CompositeState compositeState := self.eContainer().oclAsType(thingML::CompositeState);
+		while (compositeState != ancestorToNewState->at(1)) {
+			dynamicInstance.getDynamicCompositeState(compositeState.oclAsType(thingML::CompositeState)).currentState := null;
+			compositeState := compositeState.eContainer().oclAsType(thingML::CompositeState);
+		}
+		compositeState := ancestorToNewState->at(1);
+		ancestorToNewState -= compositeState;
+		while (ancestorToNewState->notEmpty()) {
+			dynamicInstance.getDynamicCompositeState(compositeState).currentState := ancestorToNewState.head;
+			compositeState := ancestorToNewState->at(1);
+			ancestorToNewState -= compositeState;
+		}
+		dynamicInstance.getDynamicCompositeState(compositeState).currentState := newState;
+		// TODO remove the events from ports that cannot be used in this state
+		'/!\\ WARNING /!\\ BAD EVENTS ARE KEPT WHEN SWITCHING STATE !!'.log();
+	}
+
+	@step
+	def boolean runASpontaneousTransition(thingml_dynamic::DynamicInstance dynamicInstance) {
+		boolean tempResult := false;
+		('LOG: ' + dynamicInstance.instance.name + ': Trying to move from State "' + self.name + '"').log();
+		Sequence(thingML::Handler) transitions :=
+				self.internal->select(i | i.event = null) + self.outgoing->select(t | t.event = null);
+		for (transition in transitions) {
+			if (transition.isValid(dynamicInstance)) {
+				thingML::State newState := transition.fire(self, dynamicInstance);
+				if (self != newState) {
+					('LOG: ' + dynamicInstance.instance.name + ': Switching state -> ' + newState.name).log();
+					self._switchState(dynamicInstance, newState);
+					if (newState.oclIsKindOf(thingML::FinalState)) {
+						('LOG: ' + dynamicInstance.instance.name + ': Entered final state').log();
+						dynamicInstance.instance.running := false;
+					}
+				} else {
+					'LOG: Staying in state "' + self.name + '"'.log();
+				}
+				tempResult := true;
+			}
+		}
+		result := tempResult;
+	}
+
+	@step
+	def boolean runAEventDrivenTransition(thingml_dynamic::DynamicInstance dynamicInstance, thingml_dynamic::DynamicMessage dynamicMessage) {
+		boolean tempResult := false;
+		('LOG: ' + dynamicInstance.instance.name + ': Trying to move from State "' + self.name + '"').log();
+		Sequence(thingML::Handler) internals := self.internal->select(i |
+			i.event.oclIsKindOf(thingML::ReceiveMessage) and (i.event.oclAsType(thingML::ReceiveMessage)).message = dynamicMessage.message
+		);
+		Sequence(thingML::Handler) outgoings := self.outgoing->select(o |
+			o.event.oclIsKindOf(thingML::ReceiveMessage) and (o.event.oclAsType(thingML::ReceiveMessage)).message = dynamicMessage.message
+		);
+		Sequence(thingml::Handler) transitions := internals + outgoings;
+		for (transition in transitions) {
+			if (transition.isValid(dynamicInstance)) {
+				State newState := transition.fire(self, dynamicInstance);
+				if (self != newState) {
+					('LOG: ' + dynamicInstance.instance.name + ': Switching state -> ' + newState.name).log();
+					self._switchState(dynamicInstance, newState);
+					if (newState.oclIsKindOf(thingML::FinalState)) {
+						('LOG: ' + dynamicInstance.instance.name + ': Entered final state').log();
+						dynamicInstance.instance.running := false;
+					}
+				} else {
+					('LOG: Staying in state "' + self.name + '"').log();
+				}
+				tempResult := true;
+			}
+		}
+		result := tempResult;
+	}
+
+	def void onEntry(thingml_dynamic::DynamicInstance dynamicInstance) {
+		if (self.entry != null) {
+			('LOG: ' + dynamicInstance.instance.name + ': ' + self.name + '.entry').log();
+			self.entry.execute(dynamicInstance);
+		}
+	}
+
+	def void onExit(thingml_dynamic::DynamicInstance dynamicInstance) {
+		if (self.exit != null) {
+			('LOG: ' + dynamicInstance.instance.name + ': ' + self.name + '.exit').log();
+			self.exit.execute(dynamicInstance);
+		}
+	}
+}
+
+open class CompositeState extends State {
+	@step
+	def boolean runASpontaneousTransition(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingML::State currentState := dynamicInstance.getDynamicCompositeState(self).currentState;
+		result := self.selectedCall('thingml_state', 'State', 'runASpontaneousTransition', dynamicInstance)
+				or currentState.runASpontaneousTransition(dynamicInstance);
+	}
+
+	@step
+	def boolean runAEventDrivenTransition(thingml_dynamic::DynamicInstance dynamicInstance, thingml_dynamic::DynamicMessage dynamicMessage) {
+		thingML::State currentState := dynamicInstance.getDynamicCompositeState(self).currentState;
+		result := currentState.runAEventDrivenTransition(dynamicInstance, dynamicMessage) or
+			self.selectedCall('thingml_state', 'State', 'runAEventDrivenTransition', dynamicInstance, dynamicMessage);
+	}	
+}

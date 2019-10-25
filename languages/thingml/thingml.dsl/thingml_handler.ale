@@ -1,0 +1,51 @@
+behavior thingml_handler;
+
+open class Handler {	
+	def boolean isValid(thingml_dynamic::DynamicInstance dynamicInstance) {
+		result := self._isValid(dynamicInstance);
+	}
+	
+	def boolean _isValid(thingml_dynamic::DynamicInstance dynamicInstance) {
+		boolean guardOK := self.guard = null;
+		if (not guardOK) {
+			('LOG: Evaluate guard "' + self.guard._str() + '"').log();
+			thingml_dynamic::Value guardValue := self.guard.value(dynamicInstance, false);
+			guardOK := guardValue.booleanValue;
+		}
+
+		result := guardOK;
+	}
+
+	@step
+	def State fire(State state, thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Firing Internal transition "' + self.name + '"').log();
+		self.action.execute(dynamicInstance);
+		result := state;
+	}
+}
+
+open class InternalTransition extends Handler {
+	def boolean isValid(thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Test Internal Transition "' + self.name + '"').log();
+		result := self._isValid(dynamicInstance);
+	}
+}
+
+open class Transition extends Handler {
+	def boolean isValid(thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Test Transition "' + self.name + '" (-> "' + self.target.name + '")').log();
+		result := self._isValid(dynamicInstance);
+	}
+
+	@step
+	def State fire(State state, thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Firing Transition "' + self.name + '" (-> "' + self.target.name + '")').log();
+		state.onExit(dynamicInstance);
+		if (self.action != null) {
+			'LOG: Execute transition body'.log();
+			self.action.execute(dynamicInstance);
+		}
+		self.target.onEntry(dynamicInstance);
+		result := self.target;
+	}
+}

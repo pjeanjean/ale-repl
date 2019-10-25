@@ -73,7 +73,6 @@ public class InferiorOrEqualImpl extends ExpressionImpl implements InferiorOrEqu
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getLeft() {
 		return left;
 	}
@@ -98,7 +97,6 @@ public class InferiorOrEqualImpl extends ExpressionImpl implements InferiorOrEqu
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setLeft(Expression newLeft) {
 		if (newLeft != left) {
 			NotificationChain msgs = null;
@@ -118,7 +116,6 @@ public class InferiorOrEqualImpl extends ExpressionImpl implements InferiorOrEqu
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getRight() {
 		return right;
 	}
@@ -143,7 +140,6 @@ public class InferiorOrEqualImpl extends ExpressionImpl implements InferiorOrEqu
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setRight(Expression newRight) {
 		if (newRight != right) {
 			NotificationChain msgs = null;

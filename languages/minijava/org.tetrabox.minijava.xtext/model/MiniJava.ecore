@@ -265,8 +265,7 @@
   <eClassifiers xsi:type="ecore:EClass" name="SymbolBinding">
     <eAnnotations source="aspect"/>
     <eAnnotations source="RuntimeData"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Value"
-        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Value"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="symbol" lowerBound="1"
         eType="#//Symbol"/>
   </eClassifiers>
@@ -274,8 +273,7 @@
     <eAnnotations source="aspect"/>
     <eAnnotations source="RuntimeData"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="field" lowerBound="1" eType="#//Field"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Value"
-        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Value"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="StringValue" eSuperTypes="#//Value">
     <eAnnotations source="aspect"/>

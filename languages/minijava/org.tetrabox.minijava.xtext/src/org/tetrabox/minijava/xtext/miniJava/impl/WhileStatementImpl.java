@@ -74,7 +74,6 @@ public class WhileStatementImpl extends StatementImpl implements WhileStatement 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getCondition() {
 		return condition;
 	}
@@ -99,7 +98,6 @@ public class WhileStatementImpl extends StatementImpl implements WhileStatement 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setCondition(Expression newCondition) {
 		if (newCondition != condition) {
 			NotificationChain msgs = null;
@@ -119,7 +117,6 @@ public class WhileStatementImpl extends StatementImpl implements WhileStatement 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Block getBlock() {
 		return block;
 	}
@@ -144,7 +141,6 @@ public class WhileStatementImpl extends StatementImpl implements WhileStatement 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setBlock(Block newBlock) {
 		if (newBlock != block) {
 			NotificationChain msgs = null;

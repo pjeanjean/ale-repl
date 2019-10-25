@@ -91,7 +91,6 @@ public class ArrayInstanceImpl extends MinimalEObjectImpl.Container implements A
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<Value> getValue() {
 		if (value == null) {
 			value = new EObjectContainmentEList<Value>(Value.class, this, MiniJavaPackage.ARRAY_INSTANCE__VALUE);
@@ -104,7 +103,6 @@ public class ArrayInstanceImpl extends MinimalEObjectImpl.Container implements A
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public int getSize() {
 		return size;
 	}
@@ -114,7 +112,6 @@ public class ArrayInstanceImpl extends MinimalEObjectImpl.Container implements A
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setSize(int newSize) {
 		int oldSize = size;
 		size = newSize;

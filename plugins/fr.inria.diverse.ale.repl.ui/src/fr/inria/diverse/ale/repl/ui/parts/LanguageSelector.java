@@ -7,7 +7,6 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
-import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.gemoc.execution.sequential.javaxdsml.api.extensions.languages.SequentialLanguageDefinitionExtensionPoint;
 import org.eclipse.gemoc.executionframework.engine.commons.DslHelper;
@@ -16,6 +15,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
@@ -25,9 +25,12 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 
+import fr.inria.diverse.ale.repl.notebook.KernelServer;
 import fr.inria.diverse.ale.repl.server.ReplLspServer;
 
 public class LanguageSelector {
+	
+	private String selectedLanguage;
 	
 	@PostConstruct
 	public void createGui(Composite parent) {
@@ -38,6 +41,10 @@ public class LanguageSelector {
 		
 		ToolItem languagesMenu = new ToolItem(toolBar, SWT.DROP_DOWN);
 		languagesMenu.setText("Languages");
+		
+		Button notebookButton = new Button(parent, SWT.DEFAULT);
+		notebookButton.setText("Notebook");
+		notebookButton.setEnabled(false);
 		
 		Menu menu = new Menu(parent);
 		for (String language : this.getAllLanguages()) {
@@ -54,7 +61,7 @@ public class LanguageSelector {
 							tmpPortInteger = -1;
 						}
 						final int portInteger = tmpPortInteger;
-						String selectedLanguage = menuItem.getText();
+						selectedLanguage = menuItem.getText();
 						languagesMenu.setText(selectedLanguage);
 						IConfigurationElement[] lspServers = Platform.getExtensionRegistry()
 								.getConfigurationElementsFor("fr.inria.diverse.ale.repl.lsp");
@@ -71,6 +78,7 @@ public class LanguageSelector {
 						}
 						REPLView.getInstance().loadLanguage(DslHelper.load(selectedLanguage),
 								language.toLowerCase().replaceAll(" ", "_"), portInteger, serverInstance);
+						notebookButton.setEnabled(true);
 					}
 					super.widgetSelected(e);
 				}
@@ -87,6 +95,26 @@ public class LanguageSelector {
 					menu.setLocation(point.x, point.y);
 					menu.setVisible(true);
 				}
+			}
+		});
+		
+		notebookButton.addListener(SWT.Selection, new Listener() {
+			@Override
+			public void handleEvent(Event event) {
+				IConfigurationElement[] notebookKernels = Platform.getExtensionRegistry()
+						.getConfigurationElementsFor("fr.inria.diverse.ale.repl.kernel");
+				KernelServer kernelInstance = null;
+				for (IConfigurationElement notebookKernel : notebookKernels) {
+					if (notebookKernel.getAttribute("languageName").equals(selectedLanguage)) {
+						try {
+							kernelInstance = (KernelServer) notebookKernel.createExecutableExtension("class");
+						} catch (CoreException e1) {
+							e1.printStackTrace();
+						}
+						break;
+					}
+				}
+				kernelInstance.start();
 			}
 		});
 	}

@@ -230,7 +230,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public int getHash() {
 		if (hash == -1) {
 			Object theKey = getKey();
@@ -244,7 +243,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setHash(int hash) {
 		this.hash = hash;
 	}
@@ -254,7 +252,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Symbol getKey() {
 		return getTypedKey();
 	}
@@ -264,7 +261,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setKey(Symbol key) {
 		setTypedKey(key);
 	}
@@ -274,7 +270,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public SymbolBinding getValue() {
 		return getTypedValue();
 	}
@@ -284,7 +279,6 @@ public class SymbolToSymbolBindingMapImpl extends MinimalEObjectImpl.Container i
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public SymbolBinding setValue(SymbolBinding value) {
 		SymbolBinding oldValue = getValue();
 		setTypedValue(value);

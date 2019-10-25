@@ -62,7 +62,6 @@ public class FieldImpl extends MemberImpl implements Field {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getDefaultValue() {
 		return defaultValue;
 	}
@@ -87,7 +86,6 @@ public class FieldImpl extends MemberImpl implements Field {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setDefaultValue(Expression newDefaultValue) {
 		if (newDefaultValue != defaultValue) {
 			NotificationChain msgs = null;

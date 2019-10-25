@@ -1,0 +1,266 @@
+behavior thingml_action;
+
+open class thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		('EXCEPTION: Action type ' + self + ' is not supported in semantics yet').log();
+	}
+
+	def String _str() {
+		('EXCEPTION: Action type ' + self + ' is not supported in semantics yet').log();
+	}
+}
+
+open class thingML.FunctionCallStatement extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		String params := '';
+		for (p in self.parameters) {
+			params := params + p._str() + ', ';
+		}
+		if (params.size() > 2) {
+			params := params.substring(1, params.size() - 2);
+		}
+		('LOG: Preparing procedure call: ' + self.function.name + '(' + params + ')').log();
+		Sequence(thingml_dynamic::Value) parameterValues := Sequence{};
+		for (p in self.parameters) {
+			parameterValues += p.value(dynamicInstance, false);
+		}
+		dynamicInstance.parameters := self.function.parameters;
+		dynamicInstance.parameterValues := parameterValues;
+		dynamicInstance.enterExecutionFrame();
+		('LOG: Execute procedure "' + self.function.name + '"').log();
+		self.function.body.execute(dynamicInstance);
+		dynamicInstance.leaveExecutionFrame();
+	}
+
+	def String _str() {
+		String params := '';
+		for (p in self.parameters) {
+			params := params + p._str() + ', ';
+		}
+		if (params.size() > 2) {
+			params := params.substring(1, params.size() - 2);
+		}
+		result := self.function.name + '(' + params + ')';
+	}
+}
+
+open class thingML.ReturnAction extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::Value value := self.exp.value(dynamicInstance, false);
+		('LOG: Return value (' + self.exp._str() + ':' + value.str() + ')').log();
+		dynamicInstance.activeFrame.returnValue := value;
+	}
+
+	def String _str() {
+		result := 'return ' + self.exp._str();
+	}
+}
+
+open class thingML.ActionBlock extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		dynamicInstance.stackExecutionContext();
+		for (a in self.actions) {
+			a.execute(dynamicInstance);
+		}
+		dynamicInstance.unstackExecutionContext();
+	}
+
+	def String _str() {
+		String str := '';
+		for (a in self.actions) {
+			str := str + a._str() + ' >>> ';
+		}
+		if (str.size() >= 5) {
+			str := str.substring(1, str.size() - 5);
+		}
+		result := '{ ' + str + ' }';
+	}
+}
+
+open class thingML.ConditionalAction extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Evaluate condition "' + self.condition._str() + '"').log();
+		thingml_dynamic::Value condition := self.condition.value(dynamicInstance, false);
+		if (condition.isBooleanValue) {
+			if (condition.booleanValue) {
+				('LOG: Condition valid').log();
+				self.action.execute(dynamicInstance);
+			} else {
+				('LOG: Condition invalid').log();
+				if (self.elseAction != null) {
+					self.elseAction.execute(dynamicInstance);
+				}
+			}
+		} else {
+			('EXCEPTION: Condition has to be a BooleanValue').log();
+		}
+	}
+
+	def String _str() {
+		String str := 'if (' + self.condition._str() + ') ' + self.action._str();
+		if (self.elseAction != null) {
+			str := str + ' else ' + self.action._str();
+		}
+		result := str;
+	}
+}
+
+open class thingML.LoopAction extends thingML.Action {
+	def boolean _evaluateLoopCondition(thingml_dynamic::DynamicInstance dynamicInstance) {
+		('LOG: Evaluate condition "' + self.condition._str() + '"').log();
+		thingml_dynamic::Value condition := self.condition.value(dynamicInstance, false);
+		if (condition.isBoolean) {
+			result := condition.booleanValue;
+		} else {
+			('LOG: Condition has to be a BooleanValue').log();
+		}
+	}
+
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		while (self._evaluateLoopCondition(dynamicInstance)) {
+			'LOG: Condition still valid'.log();
+			self.action.execute(dynamicInstance);
+		}
+		('LOG: Condition not valid anymore').log();
+	}
+
+	def String _str() {
+		result := 'while (' + self.condition._str() + ') ' + self.action._str();
+	}
+}
+
+open class thingML.PrintAction extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::Value messValue := self.msg->at(1).value(dynamicInstance, false);
+		('LOG: Print "' + messValue._str() + '"').log();
+		messValue.print().log();
+	}
+
+	def String _str() {
+		result := 'print ' + self.msg->at(1)._str();
+	}
+}
+
+open class thingML.LocalVariable extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::Value value := self.init.value(dynamicInstance, false);
+		('LOG: Add (' + self.name + ',' + value._str() + ')').log();
+		dynamicInstance.addVariable(self, value);
+	}
+
+	def String _str() {
+		result := 'var ' + self.name + ' : ' + self.typeRef.type.name + ' = ' + self.init._str();
+	}
+}
+
+open class thingML.Increment extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::DynamicVariable dynamicVariable := dynamicInstance.getDynamicVariable(self.var);
+		dynamicVariable.value := dynamicVariable.value.increment();
+		('LOG: Assign (' + self.var.name + ',' + dynamicVariable.value._str() + ')').log();
+	}
+
+	def String _str() {
+		result := self.var.name + '++';
+	}
+}
+
+open class thingML.Decrement extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::DynamicVariable dynamicVariable := dynamicInstance.getDynamicVariable(self.var);
+		dynamicVariable.value := dynamicVariable.value.decrement();
+		('LOG: Assign (' + self.var.name + ',' + dynamicVariable.value._str() + ')').log();
+	}
+
+	def String _str() {
+		result := self.var.name + '--';
+	}
+}
+
+open class thingML.VariableAssignment extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		thingml_dynamic::Value value := self.expression.value(dynamicInstance, false);
+		thingml_dynamic::DynamicVariable dynamicVariable := dynamicInstance.getDynamicVariable(self.property);
+		if (self.index->isEmpty()) {
+			('LOG: Assign (' + self.property.name + ',' + value._str() + ')').log();
+			dynamicVariable.value := value;
+		} else if (self.index->size() = 1) {
+			thingml_dynamic::Value index := self.index->at(1).value(dynamicInstance, false);
+			if (index.isInteger) {
+				if (dynamicVariable.value.isArray) {
+					('LOG: Assign (' + self.property.name + '[' + index._str() + '],' + value._str() + ')').log();
+					thingml_dynamic::Value arrayValue := dynamicVariable.value;
+					if (index.integerValue + 1 = 1) {
+						arrayValue.arrayValues := arrayValue.arrayValues->insertAt(1, value);
+					} else if (index.integerValue + 1 = index->size() + 1) {
+						arrayValue.arrayValues += value;
+					} else {
+						arrayValue.arrayValues := arrayValue.arrayValues
+								->subSequence(1, index.integerValue)->append(value)
+								->union(arrayValue.arrayValues->subSequence(index.integerValue + 2,
+										arrayValue.arrayValues->size()));
+					}
+				} else {
+					'EXCEPTION: Trying to access cell of a non array variable'.log();
+				}
+			} else {
+				'EXCEPTION: Index has to be an IntegerValue'.log();
+			}
+		} else {
+			'EXCEPTION: How can?!'.log();
+		}
+	}
+
+	def String _str() {
+		String str := self.property.name;
+		if (self.index->notEmpty()) {
+			str := str + '[' + self.index->at(1)._str() + ']';
+		}
+		result := str + ' = ' + self.expression._str();
+	}
+}
+
+open class thingML.SendAction extends thingML.Action {
+	def void execute(thingml_dynamic::DynamicInstance dynamicInstance) {
+		Sequence(thingml_dynamic::Value) paramValues := Sequence{};
+		for (e in self.parameters) {
+			paramValues += e.value(dynamicInstance, false);
+		}
+		String paramsString := '';
+		for (v in paramValues) {
+			paramsString := paramsString + v._str() + ', ';
+		}
+		if (paramsString.size() >= 2) {
+			paramsString := paramsString.substring(1, paramsString.size() - 2);
+		}
+		String recipients := '';
+		for (recipient in dynamicInstance.getDynamicPort(self.port).connectedPorts) {
+			thingml_dynamic::DynamicMessage dynamicMessage := thingml_dynamic::DynamicMessage.create();
+			dynamicMessage.message := self.message;
+			for (value in paramValues) {
+				dynamicMessage.parameters += value.deepCopy();
+			}
+			if (recipient.port.receives->includes(self.message)) {
+				recipients := recipients
+						+ recipient.eContainer().oclAsType(thingml_dynamic::DynamicInstance).instance.name
+						+ '.' + recipient.port.name + ', ';
+				recipient.receivedMessages += dynamicMessage;
+			}
+		}
+		if (recipients.size() > 2) {
+			recipients := recipients.substring(1, recipients.size() - 2);
+		}
+		('LOG: ' + dynamicInstance.instance.name + '.' + self._str() + ' -> [' + recipients + ']').log();
+	}
+
+	def String _str() {
+		String params := '';
+		for (p in self.parameters) {
+			params := params + p._str() + ', ';	
+		}
+		if (params.size() > 2) {
+			params := params.substring(1, params.size() - 2);
+		}
+		result := self.port.name + '!' + self.message.name + '(' + params + ')';
+	}
+}

@@ -81,7 +81,6 @@ public class ClazzImpl extends TypeDeclarationImpl implements Clazz {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public boolean isIsabstract() {
 		return isabstract;
 	}
@@ -91,7 +90,6 @@ public class ClazzImpl extends TypeDeclarationImpl implements Clazz {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setIsabstract(boolean newIsabstract) {
 		boolean oldIsabstract = isabstract;
 		isabstract = newIsabstract;
@@ -104,7 +102,6 @@ public class ClazzImpl extends TypeDeclarationImpl implements Clazz {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Clazz getSuperClass() {
 		if (superClass != null && superClass.eIsProxy()) {
 			InternalEObject oldSuperClass = (InternalEObject)superClass;
@@ -131,7 +128,6 @@ public class ClazzImpl extends TypeDeclarationImpl implements Clazz {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setSuperClass(Clazz newSuperClass) {
 		Clazz oldSuperClass = superClass;
 		superClass = newSuperClass;

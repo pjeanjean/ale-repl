@@ -69,7 +69,6 @@ public class StringConstantImpl extends ExpressionImpl implements StringConstant
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public String getValue() {
 		return value;
 	}
@@ -79,7 +78,6 @@ public class StringConstantImpl extends ExpressionImpl implements StringConstant
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setValue(String newValue) {
 		String oldValue = value;
 		value = newValue;

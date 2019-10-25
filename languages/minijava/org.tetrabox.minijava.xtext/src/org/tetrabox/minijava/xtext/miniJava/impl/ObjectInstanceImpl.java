@@ -82,7 +82,6 @@ public class ObjectInstanceImpl extends MinimalEObjectImpl.Container implements 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<FieldBinding> getFieldbindings() {
 		if (fieldbindings == null) {
 			fieldbindings = new EObjectContainmentEList<FieldBinding>(FieldBinding.class, this, MiniJavaPackage.OBJECT_INSTANCE__FIELDBINDINGS);
@@ -95,7 +94,6 @@ public class ObjectInstanceImpl extends MinimalEObjectImpl.Container implements 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Clazz getType() {
 		if (type != null && type.eIsProxy()) {
 			InternalEObject oldType = (InternalEObject)type;
@@ -122,7 +120,6 @@ public class ObjectInstanceImpl extends MinimalEObjectImpl.Container implements 
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setType(Clazz newType) {
 		Clazz oldType = type;
 		type = newType;

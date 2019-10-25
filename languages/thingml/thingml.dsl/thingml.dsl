@@ -1,0 +1,17 @@
+name=ThingML
+ecore=platform:/resource/thingml/model/generated/ThingML.ecore
+ale=platform:/resource/thingml.dsl/thingml_dynamic.ale,\
+    platform:/resource/thingml.dsl/thingml_configuration.ale,\
+    platform:/resource/thingml.dsl/thingml_state.ale,\
+    platform:/resource/thingml.dsl/thingml_handler.ale,\
+    platform:/resource/thingml.dsl/thingml_instance.ale,\
+    platform:/resource/thingml.dsl/thingml_action.ale,\
+    platform:/resource/thingml.dsl/thingml_expression.ale
+syntax=platform:/resource/thingml/model/generated/ThingML.ecore
+behavior=platform:/resource/thingml.dsl/thingml_dynamic.ale,\
+    platform:/resource/thingml.dsl/thingml_configuration.ale,\
+    platform:/resource/thingml.dsl/thingml_state.ale,\
+    platform:/resource/thingml.dsl/thingml_handler.ale,\
+    platform:/resource/thingml.dsl/thingml_instance.ale,\
+    platform:/resource/thingml.dsl/thingml_action.ale,\
+    platform:/resource/thingml.dsl/thingml_expression.ale

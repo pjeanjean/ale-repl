@@ -4,4 +4,5 @@
   <semanticResources>http://www.eclipse.org/emf/2002/Ecore</semanticResources>
   <semanticResources>http://www.eclipse.org/acceleo/query/1.0</semanticResources>
   <semanticResources>model/minijava_exec.ale</semanticResources>
+  <semanticResources>model/minijava_exec.v2r</semanticResources>
 </viewpoint:DAnalysis>

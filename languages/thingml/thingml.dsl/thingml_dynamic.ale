@@ -1,0 +1,559 @@
+behavior thingml_dynamic;
+
+class DynamicInstance {
+	contains 0 .. * thingml_dynamic::DynamicPort dynamicPorts;
+	contains 0 .. * thingml_dynamic::DynamicVariable dynamicProperties;
+	contains 0 .. * thingml_dynamic::DynamicCompositeState dynamicCompositeStates;
+	contains 1 .. 1 thingml_dynamic::Frame executionFrame;
+	1 .. 1 thingML::Instance instance;
+	1 .. 1 thingml_dynamic::Frame activeFrame;
+	
+	Sequence(thingML::Parameter) parameters;
+	Sequence(thingml_dynamic::Value) parameterValues;
+	
+	def void init(Instance instance) {
+		('LOG: DynIns: Start initialization of dynamic instance "' + instance.name + '"').log();
+		self.instance := instance;
+		self.executionFrame := thingml_dynamic::Frame.create();
+		self.activeFrame := self.executionFrame;
+		self.activeFrame.rootContext := thingml_dynamic::Context.create();
+		self.activeFrame.topContext := self.activeFrame.rootContext;
+		('LOG: DynIns: End initialization of dynamic instance "' + instance.name + '"').log();
+	}
+
+	@step
+	def thingml_dynamic::DynamicVariable _searchDynamicProperties(Property property) {
+		Sequence(thingml_dynamic::DynamicVariable) candidate_entries :=
+				self.dynamicProperties->select(e | e.variable = property);
+		if (candidate_entries->size() = 1) {
+			result := candidate_entries->at(1);
+		} else {
+			'EXCEPTION: Wut? More than one entry for a property?'.log();
+		}
+	}
+
+	@step
+	def thingml_dynamic::DynamicCompositeState getDynamicCompositeState(CompositeState compositeState) {
+		Sequence(thingml_dynamic::DynamicCompositeState) candidate_entries :=
+				self.dynamicCompositeStates->select(e | e.compositeState = compositeState);
+		if (candidate_entries->size() = 1) {
+			result := candidate_entries->at(1);
+		} else {
+			'EXCEPTION: Wut? More than one entry for a stateContainer?'.log();
+		}
+	}
+
+	def thingml_dynamic::DynamicPort getDynamicPort(Port port) {
+		Sequence(thingml_dynamic::DynamicPort) dynamicPortCandidates :=
+				self.dynamicPorts->select(dp | dp.port = port);
+		if (dynamicPortCandidates->size() = 1) {
+			result := dynamicPortCandidates->at(1);
+		} else {
+			('LOG: More than one DynamicPort for Port "' + port.name + '"').log();
+		}
+	}
+
+	def thingml_dynamic::DynamicVariable _searchContext(thingml_dynamic::Context context, Variable variable) {
+		String contextVariablesString := '';
+		for (dv in context.dynamicVariables) {
+			contextVariablesString := contextVariablesString + '(' + dv.variable.name + ':' + dv.value._str() + '), ';
+		}
+		if (contextVariablesString->size() >= 2) {
+			contextVariablesString := contextVariablesString.substring(1, contextVariablesString.size() - 1);
+		}
+		('LOG: [' + contextVariablesString + ']...').log();
+		Sequence(thingml_dynamic::DynamicVariable) dynamicVariableCandidates :=
+				context.dynamicVariables->select(dv | dv.variable = variable);
+		if (dynamicVariableCandidates->size() = 0) {
+			result := null;
+		} else {
+			if (dynamicVariableCandidates->size() = 1) {
+				result := dynamicVariableCandidates->at(1);
+			} else {
+				('EXCEPTION: More than one DynamicVariable for Variable "' + variable.name + '"').log();
+			}
+		}
+	}
+
+	def thingml_dynamic::DynamicVariable _searchContexts(Variable variable) {
+		thingml_dynamic::Context context := self.activeFrame.topContext;
+		thingml_dynamic::DynamicVariable dynamicVariable := null;
+		('LOG: Searching "' + variable.name + '" in contexts: ').log();
+		while (dynamicVariable = null and context != null) {
+			dynamicVariable := self._searchContext(context, variable);
+			context := context.parentContext;
+		}
+		if (dynamicVariable = null) {
+			('EXCEPTION: Undefined variable "' + variable.name + '"').log();
+		}
+		'LOG: Found!'.log();
+		result := dynamicVariable;
+	}
+
+	def thingml_dynamic::DynamicVariable getDynamicVariable(Variable variable) {
+		if (variable.oclIsKindOf(thingML::Property)) {
+			result := self._searchDynamicProperties(variable);
+		} else {
+			result := self._searchContexts(variable);
+		}
+	}
+
+	def void enterExecutionFrame() {
+		self.activeFrame.childFrame := thingml_dynamic::Frame.create();
+		self.activeFrame.childFrame.parentFrame := self.activeFrame;
+		self.activeFrame := self.activeFrame.childFrame;
+		self.activeFrame.rootContext := thingml_dynamic::Context.create();
+		self.activeFrame.topContext := self.activeFrame.rootContext;
+		int i := 1;
+		while (i <= self.parameters->size()) {
+			self.addVariable(self.parameters->at(i), self.parameterValues->at(i));
+			i := i + 1;
+		}
+	}
+
+	def thingml_dynamic::Value leaveExecutionFrame() {
+		thingml_dynamic::Value returnValue := self.activeFrame.returnValue;
+		self.activeFrame := self.activeFrame.parentFrame;
+		self.activeFrame.childFrame.parentFrame := null;
+		self.activeFrame.childFrame := null;
+		result := returnValue;
+	}
+
+	def void stackExecutionContext() {
+		self.activeFrame.topContext.childContext := thingml_dynamic::Context.create();
+		self.activeFrame.topContext.childContext.parentContext := self.activeFrame.topContext;
+		self.activeFrame.topContext := self.activeFrame.topContext.childContext;
+	}
+
+	def void unstackExecutionContext() {
+		self.activeFrame.topContext := self.activeFrame.topContext.parentContext;
+		self.activeFrame.topContext.childContext.parentContext := null;
+		self.activeFrame.topContext.childContext := null;
+	}
+
+	def void addVariable(Variable variable, thingml_dynamic::Value value) {
+		thingml_dynamic::DynamicVariable dynamicVariable := thingml_dynamic::DynamicVariable.create();
+		dynamicVariable.variable := variable;
+		dynamicVariable.value := value;
+		self.activeFrame.topContext.dynamicVariables += dynamicVariable;
+	}
+
+	@step
+	def void clearContext() {
+		self.activeFrame.topContext.dynamicVariables := Sequence{};
+	}
+}
+
+class Value {
+	boolean isNull;	
+	boolean isInteger;	
+	int integerValue;
+	boolean isString;	
+	String stringValue;
+	boolean isArray;
+	Sequence(thingml_dynamic::Value) arrayValues;
+	boolean isProxy;	
+	thingML::Expression proxyValue;
+	boolean isArrayProxy;
+	Sequence(thingml_dynamic::ArrayProxyEntry) arrayProxyValues;
+	boolean isBooleanValue;
+	boolean booleanValue;
+	
+	def void unsetAll() {
+		self.isNull := false;	
+		self.isInteger := false;	
+		self.isString := false;	
+		self.isArray := false;	
+		self.isProxy := false;	
+		self.isArrayProxy := false;
+		self.isBooleanValue := false;
+	}
+	
+	def void setNull() {
+		self.unsetAll();
+		self.isNull := true;
+	}
+	
+	def void setInteger() {
+		self.unsetAll();
+		self.isInteger := true;
+	}
+	
+	def void setString() {
+		self.unsetAll();
+		self.isString := true;
+	}
+	
+	def void setArray() {
+		self.unsetAll();
+		self.isArray := true;
+		self.arrayValues := Sequence{};
+	}
+	
+	def void setProxy() {
+		self.unsetAll();
+		self.isProxy := true;
+	}
+	
+	def void setProxyValue() {
+		self.unsetAll();
+		self.isArrayProxy := true;
+		self.isProxy := true;
+		self.arrayProxyValues := Sequence{};
+	}
+	
+	def void setBooleanValue() {
+		self.unsetAll();
+		self.isBooleanValue := true;
+	}
+	
+	def thingml_dynamic::Value increment() {
+		if (self.isProxy) {
+			result := self;
+		}
+		if (self.isInteger) {
+			thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+			newValue.setInteger();
+			newValue.integerValue := self.integerValue + 1;
+			result := newValue;
+		}
+	}
+	
+	def thingml_dynamic::Value decrement() {
+		if (self.isProxy) {
+			result := self;
+		}
+		if (self.isInteger) {
+			thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+			newValue.setInteger();
+			newValue.integerValue := self.integerValue - 1;
+			result := newValue;
+		}
+	}
+	
+	def thingml_dynamic::Value plus(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isString) {
+			if (other.isString) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setString();
+				newValue.stringValue := self.stringValue + other.stringValue;
+				result := newValue;
+			}
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setString();
+				newValue.stringValue := self.stringValue + other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+		if (self.isInteger) {
+			if (other.isString) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setString();
+				newValue.stringValue := self.integerValue + other.stringValue;
+				result := newValue;
+			}
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setInteger();
+				newValue.integerValue := self.integerValue + other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value minus(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setInteger();
+				newValue.integerValue := self.integerValue - other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value times(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setInteger();
+				newValue.integerValue := self.integerValue * other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value modulo(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setInteger();
+				newValue.integerValue := self.integerValue.mod(other.integerValue);
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value lower(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue < other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value lowerOrEqual(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue <= other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value greater(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue > other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value greaterOrEqual(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue >= other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value equal(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isString) {
+			if (other.isString) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.stringValue = other.stringValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue = other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value notEqual(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isInteger) {
+			if (other.isInteger) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.integerValue = other.integerValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def thingml_dynamic::Value _and(thingml_dynamic::Value other) {		
+		if (self.isProxy) {
+			result := self.copy();
+		}
+		if (self.isBooleanValue) {
+			if (other.isBooleanValue) {
+				thingml_dynamic::Value newValue := thingml_dynamic::Value.create();
+				newValue.setBooleanValue();
+				newValue.booleanValue := self.booleanValue = other.booleanValue;
+				result := newValue;
+			}
+			if (other.isProxy) {
+				result := other;
+			}
+		}
+	}
+	
+	def String print() {
+		result := self._str();
+	}
+	
+	def String _str() {
+		if (self.isNull) {
+			result := 'null';
+		}
+		if (self.isInteger) {
+			result := '' + self.integerValue;
+		}
+		if (self.isString) {
+			result := '"' + self.stringValue + '"';
+		}
+		if (self.isProxy) {
+			result := '<' + self.proxyValue._str() + '>';
+		}
+		if (self.isBooleanValue) {
+			result := '' + self.booleanValue;
+		}
+	}
+	
+	def thingml_dynamic::Value deepCopy() {
+		result := self.copy();
+	}
+	
+	def thingml_dynamic::Value copy() {
+		if (self.isProxy and not self.isArrayProxy) {
+			thingml_dynamic::Value newProxy := thingml_dynamic::Value.create();
+			newProxy.setProxy();
+			newProxy.proxyValue := self.proxyValue;
+			result := newProxy;
+		}
+		if (self.isArrayProxy) {			
+			thingml_dynamic::Value newArrayProxy := thingml_dynamic::Value.create();
+			newArrayProxy.setProxyValue();
+			newArrayProxy.arrayProxyValues := Sequence{};
+			newArrayProxy.proxyValue := self.proxyValue;
+			for (v in self.arrayProxyValues) {
+				newArrayProxy.arrayProxyValues += v;
+			}
+			result := newArrayProxy;
+		}
+		if (self.isArray) {
+			thingml_dynamic::Value newArray := thingml_dynamic::Value.create();
+			newArray.setArray();
+			newArray.arrayValues := Sequence{};
+			for (v in self.arrayValues) {
+				newArray.arrayValues += v;
+			}
+			result := newArray;
+		}
+		if (self.isString) {
+			thingml_dynamic::Value newString := thingml_dynamic::Value.create();
+			newString.setString();
+			newString.stringValue := self.stringValue;
+			result := newString;
+		}
+		if (self.isInteger) {
+			thingml_dynamic::Value newInteger := thingml_dynamic::Value.create();
+			newInteger.setInteger();
+			newInteger.integerValue := self.integerValue;
+			result := newInteger;
+		}
+	}
+}
+
+class ArrayProxyEntry {
+	1 .. 1 thingML::Expression indexExpression;
+	1 .. 1 thingml_dynamic::Value value;
+}
+
+class DynamicCompositeState {
+	1 .. 1 CompositeState compositeState;
+	1 .. 1 State currentState;
+}
+
+class Frame {
+	contains 0 .. 1 thingml_dynamic::Frame childFrame;
+	0 .. 1 thingml_dynamic::Frame parentFrame;
+	contains 1 .. 1 thingml_dynamic::Context rootContext;
+	1 .. 1 thingml_dynamic::Context topContext;
+	contains 0 .. 1 thingml_dynamic::Value returnValue;
+}
+
+class Context {
+	contains 0 .. 1 thingml_dynamic::Context childContext;
+	0 .. 1 thingml_dynamic::Context parentContext;
+	contains 0 .. * thingml_dynamic::DynamicVariable dynamicVariables;
+}
+
+class DynamicVariable {
+	1 .. 1 Variable variable;
+	contains 1 .. 1 thingml_dynamic::Value value;
+}
+
+class DynamicPort {
+	1 .. 1 Port port;
+	contains 0 .. * thingml_dynamic::DynamicMessage receivedMessages;
+	0 .. * thingml_dynamic::DynamicPort connectedPorts;
+}
+
+class DynamicMessage {
+	1 .. 1 Message message;
+	contains 0 .. * thingml_dynamic::Value parameters;
+}

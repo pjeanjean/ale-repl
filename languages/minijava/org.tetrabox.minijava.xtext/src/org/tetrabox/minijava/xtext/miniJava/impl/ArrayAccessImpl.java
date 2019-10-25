@@ -73,7 +73,6 @@ public class ArrayAccessImpl extends ExpressionImpl implements ArrayAccess {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getObject() {
 		return object;
 	}
@@ -98,7 +97,6 @@ public class ArrayAccessImpl extends ExpressionImpl implements ArrayAccess {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setObject(Expression newObject) {
 		if (newObject != object) {
 			NotificationChain msgs = null;
@@ -118,7 +116,6 @@ public class ArrayAccessImpl extends ExpressionImpl implements ArrayAccess {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Expression getIndex() {
 		return index;
 	}
@@ -143,7 +140,6 @@ public class ArrayAccessImpl extends ExpressionImpl implements ArrayAccess {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setIndex(Expression newIndex) {
 		if (newIndex != index) {
 			NotificationChain msgs = null;

@@ -1,15 +1,4 @@
-import "platform:/resource/org.tetrabox.minijava.xtext/model/MiniJava.ecore"
-
-repl minijava_repl:
-	attribute miniJava::State state;
-	initrepl def void initialize() {
-		miniJava::Context rootCont := miniJava::Context.create();
-		miniJava::State state := miniJava::State.create();
-		state.outputStream := miniJava::OutputStream.create();
-		state.rootFrame := miniJava::Frame.create();
-		state.rootFrame.rootContext := rootCont;
-		self.state := state;
-}
+import 'platform:/resource/org.tetrabox.minijava.xtext/model/MiniJava.ecore'
 
 instruction miniJava.TypeDeclaration:
 	doNothing();
@@ -41,3 +30,14 @@ instruction miniJava.Method:
 instruction miniJava.Expression:
 	evaluateExpression(minijava_repl.state)
 	=> output.customToString();
+
+interpreter minijava_repl:
+	attribute miniJava::State state;
+	initrepl def void initialize() {
+		miniJava::Context rootCont := miniJava::Context.create();
+		miniJava::State state := miniJava::State.create();
+		state.outputStream := miniJava::OutputStream.create();
+		state.rootFrame := miniJava::Frame.create();
+		state.rootFrame.rootContext := rootCont;
+		self.state := state;
+}

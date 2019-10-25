@@ -7,6 +7,8 @@ import org.eclipse.xtext.scoping.IGlobalScopeProvider
 import fr.inria.diverse.ale.repl.scoping.Visitor2replGlobalScopeProvider
 import org.eclipse.xtext.formatting2.IFormatter2
 import fr.inria.diverse.ale.repl.formatting2.Visitor2replFormatter
+import org.eclipse.xtext.conversion.IValueConverterService
+import fr.inria.diverse.ale.repl.conversion.StringValueConverter
 
 /**
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
@@ -19,6 +21,10 @@ class Visitor2replRuntimeModule extends AbstractVisitor2replRuntimeModule {
 	
 	override Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
 		Visitor2replGlobalScopeProvider
+	}
+	
+	override Class<? extends IValueConverterService> bindIValueConverterService() {
+		StringValueConverter
 	}
 	
 }

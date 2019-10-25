@@ -1,5 +1,6 @@
 behavior minijava_exec;
 
+
 open class miniJava.Program {
 	miniJava::State state;
 	
@@ -94,6 +95,7 @@ open class miniJava.Assignment {
 	@step
 	def void evaluateStatement(miniJava::State state) { //  dispatch 
 		miniJava::Context context := state.findCurrentContext();
+		self.value.evaluateExpression(state);
 		miniJava::Value right := self.value.evaluateExpression(state);
 		miniJava::Assignee assignee := self.assignee;
 		if (assignee.oclIsKindOf(miniJava::SymbolRef)) {
@@ -220,7 +222,7 @@ open class miniJava.Method {
 	
 	def miniJava::Method findOverride(Clazz c) {
 		miniJava::Method that := self;
-		miniJava::Method found;
+		miniJava::Method found := null;
 		if(c.members->exists(x | x = that)) {
 			result := self;
 		} else {
@@ -686,8 +688,7 @@ open class miniJava.NewArray {
 			self.size.evaluateExpression(state).oclAsType(miniJava::IntegerValue);
 		res.size := sizeArray.value;
 		state.arraysHeap += res;
-		
-		miniJava::Value defaultValue;
+		miniJava::Value defaultValue := null;
 		if (self.type.oclIsKindOf(miniJava::IntegerTypeRef)) {
 			miniJava::IntegerValue idv := miniJava::IntegerValue.create();
 			idv.value := 0;
@@ -703,7 +704,6 @@ open class miniJava.NewArray {
 			miniJava::NullValue idv := miniJava::NullValue.create();
 			defaultValue := idv;
 		}
-		
 		int i := 0;
 		int sz := res.size;
 		while(i < sz) {
@@ -713,7 +713,7 @@ open class miniJava.NewArray {
 		
 		miniJava::ArrayRefValue ret := miniJava::ArrayRefValue.create();
 		ret.instance := res;
-		result := ret; 
+		result := ret;
 	}
 }
 
@@ -738,7 +738,7 @@ open class miniJava.NewObject {
 				}
 			}
 			i := i+1;
-		}			
+		}
 //			if (f.defaultValue != null) {
 //				val v = f.defaultValue.evaluateExpression(state)
 //				res.fieldbindings.add(MinijavadynamicdataFactory::eINSTANCE.createFieldBinding => [
@@ -753,7 +753,7 @@ open class miniJava.NewObject {
 //			it.name = null && it.params.size = _self.args.size
 //		]
 		i:=0;
-		miniJava::Method constructor;
+		miniJava::Method constructor := null;
 		while(i<z and constructor = null) {
 			miniJava::Member m := res.type.members->at(1+i);
 			if(m.oclIsKindOf(miniJava::Method)) {
@@ -764,7 +764,6 @@ open class miniJava.NewObject {
 			}
 			i:=i+1;
 		}
-		
 		if(constructor != null) {
 			
 //
@@ -877,9 +876,7 @@ open class miniJava.State {
 	
 }
 
-open class miniJava.Frame {
-	//[ mutable childFrame ]
-	
+open class miniJava.Frame {	
 	def  miniJava::Context findCurrentContext() {
 		if (self.childFrame != null) {
 			result := self.childFrame.findCurrentContext();

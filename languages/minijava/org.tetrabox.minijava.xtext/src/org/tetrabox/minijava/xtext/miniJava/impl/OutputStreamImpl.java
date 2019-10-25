@@ -63,7 +63,6 @@ public class OutputStreamImpl extends MinimalEObjectImpl.Container implements Ou
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public EList<String> getStream() {
 		if (stream == null) {
 			stream = new EDataTypeEList<String>(String.class, this, MiniJavaPackage.OUTPUT_STREAM__STREAM);

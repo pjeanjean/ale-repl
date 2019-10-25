@@ -2721,7 +2721,7 @@ public interface MiniJavaPackage extends EPackage {
 	int SYMBOL_BINDING = 61;
 
 	/**
-	 * The feature id for the '<em><b>Value</b></em>' containment reference.
+	 * The feature id for the '<em><b>Value</b></em>' reference.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
@@ -2776,7 +2776,7 @@ public interface MiniJavaPackage extends EPackage {
 	int FIELD_BINDING__FIELD = 0;
 
 	/**
-	 * The feature id for the '<em><b>Value</b></em>' containment reference.
+	 * The feature id for the '<em><b>Value</b></em>' reference.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
@@ -5071,10 +5071,10 @@ public interface MiniJavaPackage extends EPackage {
 	EClass getSymbolBinding();
 
 	/**
-	 * Returns the meta object for the containment reference '{@link org.tetrabox.minijava.xtext.miniJava.SymbolBinding#getValue <em>Value</em>}'.
+	 * Returns the meta object for the reference '{@link org.tetrabox.minijava.xtext.miniJava.SymbolBinding#getValue <em>Value</em>}'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @return the meta object for the containment reference '<em>Value</em>'.
+	 * @return the meta object for the reference '<em>Value</em>'.
 	 * @see org.tetrabox.minijava.xtext.miniJava.SymbolBinding#getValue()
 	 * @see #getSymbolBinding()
 	 * @generated
@@ -5114,10 +5114,10 @@ public interface MiniJavaPackage extends EPackage {
 	EReference getFieldBinding_Field();
 
 	/**
-	 * Returns the meta object for the containment reference '{@link org.tetrabox.minijava.xtext.miniJava.FieldBinding#getValue <em>Value</em>}'.
+	 * Returns the meta object for the reference '{@link org.tetrabox.minijava.xtext.miniJava.FieldBinding#getValue <em>Value</em>}'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @return the meta object for the containment reference '<em>Value</em>'.
+	 * @return the meta object for the reference '<em>Value</em>'.
 	 * @see org.tetrabox.minijava.xtext.miniJava.FieldBinding#getValue()
 	 * @see #getFieldBinding()
 	 * @generated
@@ -6930,7 +6930,7 @@ public interface MiniJavaPackage extends EPackage {
 		EClass SYMBOL_BINDING = eINSTANCE.getSymbolBinding();
 
 		/**
-		 * The meta object literal for the '<em><b>Value</b></em>' containment reference feature.
+		 * The meta object literal for the '<em><b>Value</b></em>' reference feature.
 		 * <!-- begin-user-doc -->
 		 * <!-- end-user-doc -->
 		 * @generated
@@ -6964,7 +6964,7 @@ public interface MiniJavaPackage extends EPackage {
 		EReference FIELD_BINDING__FIELD = eINSTANCE.getFieldBinding_Field();
 
 		/**
-		 * The meta object literal for the '<em><b>Value</b></em>' containment reference feature.
+		 * The meta object literal for the '<em><b>Value</b></em>' reference feature.
 		 * <!-- begin-user-doc -->
 		 * <!-- end-user-doc -->
 		 * @generated

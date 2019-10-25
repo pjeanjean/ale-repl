@@ -62,7 +62,6 @@ public class TypedDeclarationImpl extends NamedElementImpl implements TypedDecla
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public TypeRef getTypeRef() {
 		return typeRef;
 	}
@@ -87,7 +86,6 @@ public class TypedDeclarationImpl extends NamedElementImpl implements TypedDecla
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setTypeRef(TypeRef newTypeRef) {
 		if (newTypeRef != typeRef) {
 			NotificationChain msgs = null;

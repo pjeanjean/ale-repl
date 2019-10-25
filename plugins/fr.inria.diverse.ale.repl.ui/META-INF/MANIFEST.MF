@@ -30,7 +30,8 @@ Require-Bundle: javax.inject,
  org.eclipse.gemoc.commons.eclipse.ui;bundle-version="3.0.0",
  org.eclipse.ui.ide;bundle-version="3.14.0",
  org.eclipse.ui;bundle-version="3.109.100",
- org.eclipse.gemoc.dsl.ui;bundle-version="3.0.0"
+ org.eclipse.gemoc.dsl.ui;bundle-version="3.0.0",
+ fr.inria.diverse.ale.repl.notebook;bundle-version="1.0.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Import-Package: javax.annotation;version="1.2.0"
 Automatic-Module-Name: fr.inria.diverse.ale.repl.ui

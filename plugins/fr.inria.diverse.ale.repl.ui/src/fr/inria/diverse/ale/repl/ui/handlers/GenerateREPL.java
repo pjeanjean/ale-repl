@@ -1,5 +1,7 @@
 package fr.inria.diverse.ale.repl.ui.handlers;
 
+import java.util.Arrays;
+
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -42,8 +44,9 @@ public class GenerateREPL extends AbstractHandler {
 					.getContents().get(0);
 			URI ecoreUri = URI.createURI(dsl.getEntries().stream().filter(e -> e.getKey().equals("ecore"))
 					.findFirst().get().getValue());
-			URI aleUri = URI.createURI(dsl.getEntries().stream().filter(e -> e.getKey().equals("ale"))
-					.findFirst().get().getValue());
+			URI aleUris[] = dsl.getEntries().stream().filter(e -> e.getKey().equals("ale"))
+					.flatMap(e -> Arrays.stream(e.getValue().split(","))).map(u -> URI.createURI(u))
+					.toArray(URI[]::new);
 			
 			SelectAnyIFileDialog dialog = new SelectAnyIFileDialog();
 			dialog.setPattern("*.xtext");
@@ -53,8 +56,9 @@ public class GenerateREPL extends AbstractHandler {
 						new REPLGenerator(v2rFile.getFullPath().toOSString(),
 								ResourcesPlugin.getWorkspace().getRoot().getFile(
 										new Path(ecoreUri.toPlatformString(true))).getRawLocation().toOSString(),
-								ResourcesPlugin.getWorkspace().getRoot().getFile(
-										new Path(aleUri.toPlatformString(true))).getRawLocation().toOSString(),
+								Arrays.stream(aleUris).map(u -> ResourcesPlugin.getWorkspace().getRoot()
+										.getFile(new Path(u.toPlatformString(true))).getRawLocation().toOSString())
+										.toArray(String[]::new),
 								xtextPath).generate("fr.inria.diverse"));
 				job.schedule();
 			}	

@@ -1,0 +1,73 @@
+behavior thingml_configuration;
+
+open class ThingMLModel {
+	@init
+	def void init() {
+		
+	}
+	
+	@main
+	def void run() {
+		for (c in self.configs) {
+			c.execute();
+		}
+	}
+}
+
+open class Configuration {
+	
+	@repl
+	def void execute() {
+		self.init();
+		self.run();
+		self.end();
+	}
+	
+	@step
+	def void init() {
+		'LOG: Config: Start initialization'.log();
+		for (instance in self.instances) {
+			instance.init();
+		}
+		for (assign in self.propassigns) {
+			assign.instance.assign(assign);
+		}
+		for (instance in self.instances) {
+			instance.resolve();
+		}
+		for (connector in self.connectors) {
+			if (connector.oclIsKindOf(thingML::Connector)) {
+				connector.cli.connect(connector);
+			}
+		}
+		'LOG: Config: End initialization'.log();
+	}
+
+	@step
+	def void run() {
+		'LOG: Config: Start main'.log();
+		boolean running := false;
+
+		// first run
+		for (instance in self.instances) {
+			instance.enterInitialState();
+			running := instance.run(true) or running;
+		}
+
+		'LOG: Config: End of the first runs'.log();
+
+		// other runs
+		while (running) {
+			running := false;
+			for (instance in self.instances) {
+				running := instance.run(false) or running;
+			}
+		}
+	}
+
+	@step
+	def void end() {
+		// Do nothing
+		'LOG: Config: End'.log();
+	}
+}

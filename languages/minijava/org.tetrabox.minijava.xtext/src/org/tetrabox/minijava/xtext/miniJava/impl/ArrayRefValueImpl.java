@@ -61,7 +61,6 @@ public class ArrayRefValueImpl extends ValueImpl implements ArrayRefValue {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public ArrayInstance getInstance() {
 		if (instance != null && instance.eIsProxy()) {
 			InternalEObject oldInstance = (InternalEObject)instance;
@@ -88,7 +87,6 @@ public class ArrayRefValueImpl extends ValueImpl implements ArrayRefValue {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setInstance(ArrayInstance newInstance) {
 		ArrayInstance oldInstance = instance;
 		instance = newInstance;

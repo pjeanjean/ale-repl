@@ -1,2 +1,5 @@
 /**/*.xtendbin
 /**/*.class
+/**/*.v2r
+/**/target/
+/**/xtend-gen/

@@ -113,7 +113,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Call getCall() {
 		return call;
 	}
@@ -138,7 +137,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setCall(Call newCall) {
 		if (newCall != call) {
 			NotificationChain msgs = null;
@@ -158,7 +156,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public ObjectInstance getInstance() {
 		if (instance != null && instance.eIsProxy()) {
 			InternalEObject oldInstance = (InternalEObject)instance;
@@ -185,7 +182,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setInstance(ObjectInstance newInstance) {
 		ObjectInstance oldInstance = instance;
 		instance = newInstance;
@@ -198,7 +194,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Frame getChildFrame() {
 		return childFrame;
 	}
@@ -223,7 +218,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setChildFrame(Frame newChildFrame) {
 		if (newChildFrame != childFrame) {
 			NotificationChain msgs = null;
@@ -243,7 +237,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Frame getParentFrame() {
 		if (eContainerFeatureID() != MiniJavaPackage.FRAME__PARENT_FRAME) return null;
 		return (Frame)eInternalContainer();
@@ -264,7 +257,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setParentFrame(Frame newParentFrame) {
 		if (newParentFrame != eInternalContainer() || (eContainerFeatureID() != MiniJavaPackage.FRAME__PARENT_FRAME && newParentFrame != null)) {
 			if (EcoreUtil.isAncestor(this, newParentFrame))
@@ -286,7 +278,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Context getRootContext() {
 		return rootContext;
 	}
@@ -311,7 +302,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setRootContext(Context newRootContext) {
 		if (newRootContext != rootContext) {
 			NotificationChain msgs = null;
@@ -331,7 +321,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public Value getReturnValue() {
 		return returnValue;
 	}
@@ -356,7 +345,6 @@ public class FrameImpl extends MinimalEObjectImpl.Container implements Frame {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@Override
 	public void setReturnValue(Value newReturnValue) {
 		if (newReturnValue != returnValue) {
 			NotificationChain msgs = null;

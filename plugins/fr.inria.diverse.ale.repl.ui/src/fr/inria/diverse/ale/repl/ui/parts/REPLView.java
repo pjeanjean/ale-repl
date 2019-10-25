@@ -49,9 +49,9 @@ import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
 
 import fr.inria.diverse.ale.repl.REPLInterpreter;
+import fr.inria.diverse.ale.repl.lsp4j.CompletionClient;
 import fr.inria.diverse.ale.repl.server.ReplLspServer;
-import fr.inria.diverse.ale.repl.ui.lsp4j.CompletionClient;
-import fr.inria.diverse.ale.repl.ui.lsp4j.Helper;
+import fr.inria.diverse.ale.repl.lsp4j.Helper;
 
 public class REPLView {
 	
