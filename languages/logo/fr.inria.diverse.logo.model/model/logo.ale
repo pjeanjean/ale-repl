@@ -90,6 +90,7 @@ open class Statement {
 	@repl__turtle__toString
 	@step
 	def void execute(Turtle turtle, SymbolTable st) {
+		self.log();
 		'ERROR: Unknown statement'.log();
 	}
 }
@@ -126,10 +127,10 @@ open class Variable {
     }
 }
 
-open class Procedure {
-	ProcedureDefinition definition := null;
+open class logo.symbol.Procedure {
+	statement::ProcedureDefinition definition;
 	
-	def void init(ProcedureDefinition definition) {
+	def void init(statement::ProcedureDefinition definition) {
 		self.definition := definition;
 		self.name := definition.name;
 	}
@@ -195,7 +196,7 @@ open class PenUp extends Statement {
 		turtle.pendown := false;
 	}
 }
-open class ProcedureDefinition extends Statement {
+open class logo.statement.ProcedureDefinition extends Statement {
 	def void execute(Turtle turtle, SymbolTable st) {
 		symbol::Procedure procedure := symbol::Procedure.create();
 		procedure.init(self);
