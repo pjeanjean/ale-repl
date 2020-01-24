@@ -2,7 +2,6 @@ package fr.inria.diverse.ale.repl.generator
 
 import org.eclipse.core.resources.ResourcesPlugin
 import org.eclipse.core.runtime.CoreException
-import org.eclipse.xtext.ui.XtextProjectHelper
 import org.eclipse.jdt.core.JavaCore
 import java.io.File
 import org.eclipse.core.resources.IResource
@@ -10,7 +9,7 @@ import org.eclipse.core.runtime.Path
 import java.io.ByteArrayInputStream
 import org.eclipse.jdt.launching.JavaRuntime
 import org.eclipse.pde.internal.core.plugin.WorkspacePluginModel
-import org.eclipse.pde.internal.ui.wizards.tools.UpdateClasspathJob
+import org.eclipse.pde.internal.core.ClasspathComputer
 
 class LSPServerGenerator {
 	
@@ -41,9 +40,8 @@ class LSPServerGenerator {
 		
 		try {
 			val projectDescription = workspaceRoot.workspace.newProjectDescription(projectName)
-			projectDescription.setNatureIds(#{XtextProjectHelper.NATURE_ID, JavaCore.NATURE_ID,
-				"org.eclipse.pde.PluginNature"
-			})
+			projectDescription.setNatureIds(#{"org.eclipse.xtext.ui.shared.xtextNature",
+					JavaCore.NATURE_ID,	"org.eclipse.pde.PluginNature"})
 			val builders = #{JavaCore.BUILDER_ID, "org.eclipse.pde.ManifestBuilder"}			
 			val commands = newArrayList;
 			for (builder : builders) {
@@ -75,11 +73,10 @@ class LSPServerGenerator {
 			
 			generateManifest(projectName)
 			generateProjectXml(projectName)
+			generateBuildProperties(projectName)
 			
-			val updateClasspath = new UpdateClasspathJob(
-					#{new WorkspacePluginModel(project.getFile("META-INF/MANIFEST.MF"), false)})
-			updateClasspath.schedule
-			updateClasspath.join
+			ClasspathComputer.setClasspath(project,
+					new WorkspacePluginModel(project.getFile("META-INF/MANIFEST.MF"), false));
 		} catch (CoreException e) {
 			e.printStackTrace
 			return null
@@ -134,6 +131,19 @@ class LSPServerGenerator {
 	}
 	
 	
+	def generateBuildProperties(String projectName) {
+		val content = '''
+			source.. = src/
+			bin.includes = .,\
+			               META-INF/,\
+			               plugin.xml
+		'''
+		
+		ResourcesPlugin.workspace.root.getProject(projectName).getFile("build.properties")
+				.create(new ByteArrayInputStream(content.bytes), true, null)
+	}
+	
+	
 	def generateImports() {
 		return '''
 			import com.google.inject.Injector;
@@ -152,6 +162,7 @@ class LSPServerGenerator {
 		'''
 	}
 	
+	
 	def generateAttributes() {
 		return '''
 			private static Injector injector = null;
@@ -162,6 +173,7 @@ class LSPServerGenerator {
 			private ServerSocket serverSocket;
 		'''
 	}
+	
 	
 	def generateStartStop() {
 		return '''

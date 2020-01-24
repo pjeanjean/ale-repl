@@ -3,7 +3,7 @@
 <schema targetNamespace="fr.inria.diverse.ale.repl" xmlns="http://www.w3.org/2001/XMLSchema">
 <annotation>
       <appinfo>
-         <meta.schema plugin="fr.inria.diverse.ale.repl" id="fr.inria.diverse.ale.repl.lsp" name="LSPServer"/>
+         <meta.schema plugin="fr.inria.diverse.ale.repl" id="org.eclipse.xtext.setup" name="XtextSetup"/>
       </appinfo>
       <documentation>
          [Enter description of this extension point.]
@@ -18,7 +18,7 @@
       </annotation>
       <complexType>
          <choice>
-            <element ref="server"/>
+            <element ref="setup"/>
          </choice>
          <attribute name="point" type="string" use="required">
             <annotation>
@@ -47,23 +47,23 @@
       </complexType>
    </element>
 
-   <element name="server">
+   <element name="setup">
       <complexType>
+         <attribute name="languageName" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
          <attribute name="class" type="string" use="required">
             <annotation>
                <documentation>
                   
                </documentation>
                <appinfo>
-                  <meta.attribute kind="java" basedOn=":fr.inria.diverse.ale.repl.server.ReplLspServer"/>
+                  <meta.attribute kind="java" basedOn=":org.eclipse.xtext.ISetup"/>
                </appinfo>
-            </annotation>
-         </attribute>
-         <attribute name="languageName" type="string" use="required">
-            <annotation>
-               <documentation>
-                  
-               </documentation>
             </annotation>
          </attribute>
       </complexType>

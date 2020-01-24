@@ -2,5 +2,6 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension-point id="fr.inria.diverse.ale.repl.lsp" name="LSPServer" schema="schema/fr.inria.diverse.ale.repl.lsp.exsd"/>
+   <extension-point id="org.eclipse.xtext.setup" name="XtextSetup" schema="schema/org.eclipse.xtext.setup.exsd"/>
 
 </plugin>

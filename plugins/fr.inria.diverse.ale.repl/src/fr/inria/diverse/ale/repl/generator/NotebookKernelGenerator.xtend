@@ -9,8 +9,8 @@ import org.eclipse.core.runtime.Path
 import java.io.ByteArrayInputStream
 import org.eclipse.jdt.launching.JavaRuntime
 import org.eclipse.pde.internal.core.plugin.WorkspacePluginModel
-import org.eclipse.pde.internal.ui.wizards.tools.UpdateClasspathJob
 import java.util.Random
+import org.eclipse.pde.internal.core.ClasspathComputer
 
 class NotebookKernelGenerator {
 	
@@ -77,11 +77,10 @@ class NotebookKernelGenerator {
 			
 			generateManifest(projectName)
 			generateProjectXml(projectName)
+			generateBuildProperties(projectName)
 			
-			val updateClasspath = new UpdateClasspathJob(
-					#{new WorkspacePluginModel(project.getFile("META-INF/MANIFEST.MF"), false)})
-			updateClasspath.schedule
-			updateClasspath.join
+			ClasspathComputer.setClasspath(project,
+					new WorkspacePluginModel(project.getFile("META-INF/MANIFEST.MF"), false));
 		} catch (CoreException e) {
 			e.printStackTrace
 			return null
@@ -121,15 +120,28 @@ class NotebookKernelGenerator {
 			<plugin>
 			   <extension
 			         point="fr.inria.diverse.ale.repl.kernel">
-			      <server
+			      <kernel
 			            class="«basePackage».notebook.«languageName»Kernel"
 			            languageName="«languageName»">
-			      </server>
+			      </kernel>
 			   </extension>
 			</plugin>
 		'''
 		
 		ResourcesPlugin.workspace.root.getProject(projectName).getFile("plugin.xml")
+				.create(new ByteArrayInputStream(content.bytes), true, null)
+	}
+	
+	
+	def generateBuildProperties(String projectName) {
+		val content = '''
+			source.. = src/
+			bin.includes = .,\
+			               META-INF/,\
+			               plugin.xml
+		'''
+		
+		ResourcesPlugin.workspace.root.getProject(projectName).getFile("build.properties")
 				.create(new ByteArrayInputStream(content.bytes), true, null)
 	}
 	
@@ -148,6 +160,7 @@ class NotebookKernelGenerator {
 			import «basePackage».xtext.server.«languageName»LspServer;
 		'''
 	}
+	
 	
 	def generateStartStop() {
 		return '''
@@ -170,6 +183,7 @@ class NotebookKernelGenerator {
 			}
 		'''
 	}
+	
 	
 	def generateInstallUninstall() {
 		return '''
@@ -197,6 +211,7 @@ class NotebookKernelGenerator {
 		'''
 	}
 	
+	
 	def generateServerClass(String projectName) {
 		var server = '''
 			package «basePackage».notebook;
@@ -222,6 +237,7 @@ class NotebookKernelGenerator {
 				
 		serverIFile.setContents(new ByteArrayInputStream(server.bytes), true, false, null)
 	}
+	
 	
 	def generateKernelFile(String projectName) {
 		val actualLanguageName = languageName.replaceAll("_repl$", "")

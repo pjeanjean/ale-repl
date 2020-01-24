@@ -15,7 +15,6 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
@@ -24,8 +23,8 @@ import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
+import org.eclipse.xtext.ISetup;
 
-import fr.inria.diverse.ale.repl.notebook.KernelServer;
 import fr.inria.diverse.ale.repl.server.ReplLspServer;
 
 public class LanguageSelector {
@@ -41,10 +40,6 @@ public class LanguageSelector {
 		
 		ToolItem languagesMenu = new ToolItem(toolBar, SWT.DROP_DOWN);
 		languagesMenu.setText("Languages");
-		
-		Button notebookButton = new Button(parent, SWT.DEFAULT);
-		notebookButton.setText("Notebook");
-		notebookButton.setEnabled(false);
 		
 		Menu menu = new Menu(parent);
 		for (String language : this.getAllLanguages()) {
@@ -63,6 +58,8 @@ public class LanguageSelector {
 						final int portInteger = tmpPortInteger;
 						selectedLanguage = menuItem.getText();
 						languagesMenu.setText(selectedLanguage);
+						
+						// This gets the LSP defined by an extension point
 						IConfigurationElement[] lspServers = Platform.getExtensionRegistry()
 								.getConfigurationElementsFor("fr.inria.diverse.ale.repl.lsp");
 						ReplLspServer serverInstance = null;
@@ -76,9 +73,25 @@ public class LanguageSelector {
 								break;
 							}
 						}
+						
+						// This gets the StandaloneSetup and does registration in place of the ui project
+						IConfigurationElement[] xtextSetups = Platform.getExtensionRegistry()
+								.getConfigurationElementsFor("org.eclipse.xtext.setup");
+						ISetup setupInstance = null;
+						for (IConfigurationElement xtextSetup : xtextSetups) {
+							if (xtextSetup.getAttribute("languageName").equals(selectedLanguage)) {
+								try {
+									setupInstance = (ISetup) xtextSetup.createExecutableExtension("class");
+									setupInstance.createInjectorAndDoEMFRegistration();
+								} catch (CoreException e1) {
+									e1.printStackTrace();
+								}
+								break;
+							}
+						}
+						
 						REPLView.getInstance().loadLanguage(DslHelper.load(selectedLanguage),
 								language.toLowerCase().replaceAll(" ", "_"), portInteger, serverInstance);
-						notebookButton.setEnabled(true);
 					}
 					super.widgetSelected(e);
 				}
@@ -95,26 +108,6 @@ public class LanguageSelector {
 					menu.setLocation(point.x, point.y);
 					menu.setVisible(true);
 				}
-			}
-		});
-		
-		notebookButton.addListener(SWT.Selection, new Listener() {
-			@Override
-			public void handleEvent(Event event) {
-				IConfigurationElement[] notebookKernels = Platform.getExtensionRegistry()
-						.getConfigurationElementsFor("fr.inria.diverse.ale.repl.kernel");
-				KernelServer kernelInstance = null;
-				for (IConfigurationElement notebookKernel : notebookKernels) {
-					if (notebookKernel.getAttribute("languageName").equals(selectedLanguage)) {
-						try {
-							kernelInstance = (KernelServer) notebookKernel.createExecutableExtension("class");
-						} catch (CoreException e1) {
-							e1.printStackTrace();
-						}
-						break;
-					}
-				}
-				kernelInstance.start();
 			}
 		});
 	}

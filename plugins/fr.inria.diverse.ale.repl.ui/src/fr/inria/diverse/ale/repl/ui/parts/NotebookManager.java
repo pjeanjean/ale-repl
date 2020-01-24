@@ -13,6 +13,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.xtext.ISetup;
 
 import fr.inria.diverse.ale.repl.notebook.KernelServer;
 
@@ -57,6 +58,26 @@ public class NotebookManager {
 					@Override
 					public void widgetSelected(SelectionEvent e) {
 						kernelInstance.install(kernelLocation.getText());
+						
+						// This gets the StandaloneSetup and does registration in place of
+						// the ui project
+						IConfigurationElement[] xtextSetups = Platform.getExtensionRegistry()
+								.getConfigurationElementsFor("org.eclipse.xtext.setup");
+						ISetup setupInstance = null;
+						for (IConfigurationElement xtextSetup : xtextSetups) {
+							if (xtextSetup.getAttribute("languageName")
+									.equals(notebookKernel.getAttribute("languageName"))) {
+								try {
+									setupInstance = (ISetup) xtextSetup
+											.createExecutableExtension("class");
+									setupInstance.createInjectorAndDoEMFRegistration();
+								} catch (CoreException e1) {
+									e1.printStackTrace();
+								}
+								break;
+							}
+						}
+						
 						kernelLocation.setEnabled(false);
 						startButton.setEnabled(true);
 						installButton.setEnabled(false);

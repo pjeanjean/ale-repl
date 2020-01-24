@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,10 +25,17 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
+import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.debug.core.ILaunchConfigurationType;
+import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
+import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.debug.core.ILaunchesListener2;
+import org.eclipse.debug.core.Launch;
+//import org.eclipse.debug.core.DebugPlugin;
+//import org.eclipse.debug.core.ILaunch;
+//import org.eclipse.debug.core.ILaunchesListener2;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
@@ -39,13 +47,16 @@ import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
-import org.eclipse.emf.mwe2.launch.ui.shortcut.Mwe2LaunchShortcut;
+import org.eclipse.emf.mwe2.launch.runtime.Mwe2Launcher;
+//import org.eclipse.emf.mwe2.launch.ui.shortcut.Mwe2LaunchShortcut;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.core.ClasspathEntry;
-import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
+import org.eclipse.jdt.launching.JavaLaunchDelegate;
+import org.eclipse.pde.internal.core.ClasspathComputer;
+//import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.pde.internal.core.plugin.WorkspacePluginModel;
-import org.eclipse.pde.internal.ui.wizards.tools.UpdateClasspathJob;
-import org.eclipse.swt.widgets.Display;
+//import org.eclipse.swt.widgets.Display;
 import org.eclipse.xtext.AbstractMetamodelDeclaration;
 import org.eclipse.xtext.AbstractRule;
 import org.eclipse.xtext.Action;
@@ -64,7 +75,6 @@ import org.eclipse.xtext.XtextRuntimeModule;
 import org.eclipse.xtext.resource.IResourceFactory;
 import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.resource.XtextResourceSet;
-import org.eclipse.xtext.ui.XtextProjectHelper;
 import org.eclipse.xtext.util.XtextVersion;
 import org.eclipse.xtext.xtext.wizard.LanguageDescriptor.FileExtensions;
 import org.eclipse.xtext.xtext.wizard.ProjectLayout;
@@ -98,7 +108,7 @@ public class ConcreteSyntaxGenerator {
 	 */
 	public IProject createProject(String modelProjectName, String projectName, String languageName) {
 		IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
-		String projectNames[] = new String[] {projectName, projectName + ".ide", projectName + ".ui"};
+		String projectNames[] = new String[] {projectName, projectName + ".ide"};
 		
 		// Delete any existing project
 		IProject project;
@@ -127,7 +137,7 @@ public class ConcreteSyntaxGenerator {
 		conf.setBaseName(projectName);
 		conf.setProjectLayout(ProjectLayout.FLAT);
 		conf.getIdeProject().setEnabled(true);
-		conf.getUiProject().setEnabled(true);
+		conf.getUiProject().setEnabled(false);
 		
 		CliProjectsCreator projectsCreator = new CliProjectsCreator();
 		projectsCreator.setLineDelimiter("\n");
@@ -143,10 +153,10 @@ public class ConcreteSyntaxGenerator {
 					IProjectDescription projectDescription = workspaceRoot.getWorkspace()
 							.newProjectDescription(currProjectName);
 					projectDescription.setLocation(workspaceRoot.getLocation().append("/" + currProjectName));
-					projectDescription.setNatureIds(new String[] {XtextProjectHelper.NATURE_ID,
+					projectDescription.setNatureIds(new String[] {"org.eclipse.xtext.ui.shared.xtextNature",
 							JavaCore.NATURE_ID, "org.eclipse.pde.PluginNature"});
 					String[] builders = new String[]{JavaCore.BUILDER_ID, "org.eclipse.pde.ManifestBuilder",
-							"org.eclipse.pde.SchemaBuilder", XtextProjectHelper.BUILDER_ID};
+							"org.eclipse.pde.SchemaBuilder", "org.eclipse.xtext.ui.shared.xtextBuilder"};
 					ICommand commands[] = new ICommand[builders.length];
 					for (int i = 0; i < builders.length; i++) {
 						ICommand command = projectDescription.newCommand();
@@ -170,38 +180,25 @@ public class ConcreteSyntaxGenerator {
 			String oldXtextProjectName = ResourcesPlugin.getWorkspace().getRoot()
 					.getFileForLocation(new Path(this.xtextPath)).getProject().getName();
 			try {
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 2; i++) {
 					IFile manifestFile = pluginModels.get(i).getFile();
 					Manifest manifest = new Manifest(manifestFile.getContents());
 					Attributes.Name requireBundle = new Attributes.Name("Require-Bundle");
 					Attributes.Name exportPackage = new Attributes.Name("Export-Package");
 					manifest.getMainAttributes().put(requireBundle,
 							manifest.getMainAttributes().get(requireBundle) + "," + ecoreProjectName
-							+ "," + oldXtextProjectName);
+							+ "," + oldXtextProjectName + ",fr.inria.diverse.ale.repl");
 					if (i == 1) {
 						manifest.getMainAttributes().put(exportPackage, projectNames[i]);
-					} else if (i == 2) {
-						String baseXtextProjectName = ResourcesPlugin.getWorkspace().getRoot()
-								.getFileForLocation(new Path(this.xtextPath)).getProject().getName();
-						manifest.getMainAttributes().put(requireBundle,
-								manifest.getMainAttributes().get(requireBundle) + ","
-										+ baseXtextProjectName + ".ui");
 					}
 					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 					manifest.write(outputStream);
 					manifestFile.setContents(new ByteArrayInputStream(outputStream.toByteArray()),
 							true, false, null);
+					ClasspathComputer.setClasspath(pluginModels.get(i).getUnderlyingResource().getProject(),
+							pluginModels.get(i));
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
-			}	
-			
-			// Update the classpath for all the projects
-			Job updateClasspath = new UpdateClasspathJob(pluginModels.toArray(new WorkspacePluginModel[0]));
-			updateClasspath.schedule();
-			try {
-				updateClasspath.join();
-			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}	
 		} catch (CoreException e) {
@@ -446,7 +443,6 @@ public class ConcreteSyntaxGenerator {
 	}
 			
 	
-	private Semaphore semaphore;
 	/**
 	 * Generate a grammar by running a MWE2 workflow
 	 * @param projectName the project in which the grammar is defined
@@ -455,56 +451,83 @@ public class ConcreteSyntaxGenerator {
 	 */
 	public URI generateGrammar(String projectName, String languageName) {
 		String upperLanguageName = languageName.substring(0, 1).toUpperCase() + languageName.substring(1);
-		this.semaphore = new Semaphore(0);		
-		// Launch the MWE2 workflow (needs to be done in UI thread)
-		Display.getDefault().asyncExec(new Runnable() {
-			@Override
-			public void run() {
-				new Mwe2LaunchShortcut().launch(new StructuredSelection(ResourcesPlugin.getWorkspace().getRoot()
-						.getFile(new Path(projectName + "/src/" + projectName.replace(".", "/") + "/Generate"
-								+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1)
-								+ ".mwe2"))), "run");
-				semaphore.release();
-			}
-		});
+		Semaphore semaphore = new Semaphore(0);
+		
+		ILaunchConfiguration config = null;
+		ILaunchConfigurationWorkingCopy wc = null;
+		final ILaunchConfigurationType configType = DebugPlugin.getDefault().getLaunchManager()
+				.getLaunchConfigurationType("org.eclipse.emf.mwe2.launch.Mwe2LaunchConfigurationType");
+
 		try {
-			semaphore.acquire();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		DebugPlugin.getDefault().getLaunchManager().addLaunchListener(new ILaunchesListener2() {
-			@Override
-			public void launchesRemoved(ILaunch[] launches) {}
-			
-			@Override
-			public void launchesChanged(ILaunch[] launches) {}
-			
-			@Override
-			public void launchesAdded(ILaunch[] launches) {}
-			
-			@Override
-			public void launchesTerminated(ILaunch[] launches) {
-				// Set the global scoping after the workflow ends
-				if (Arrays.stream(launches).anyMatch(l -> l.getLaunchConfiguration()
-						.getName().startsWith("Generate" + upperLanguageName + ".mwe2"))) {
-					try {
-						IProject xtextProject =
-								ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-						xtextProject.refreshLocal(IResource.DEPTH_INFINITE, null);
-					} catch (CoreException e) {
-						e.printStackTrace();
+			wc = configType.newInstance(null, DebugPlugin.getDefault().getLaunchManager()
+					.generateLaunchConfigurationName("Generate" + upperLanguageName + ".mwe2"));
+			wc.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, projectName);
+			wc.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME,
+					Mwe2Launcher.class.getName());
+			wc.setAttribute(IJavaLaunchConfigurationConstants.ATTR_STOP_IN_MAIN, false);
+			wc.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROGRAM_ARGUMENTS,
+					"src/" + projectName.replace(".", "/") + "/Generate" + upperLanguageName + ".mwe2");
+			config = wc.doSave();
+			Launch launch = new Launch(config, ILaunchManager.RUN_MODE, null);
+			new JavaLaunchDelegate().launch(config, ILaunchManager.RUN_MODE, launch, null);
+			DebugPlugin.getDefault().getLaunchManager().addLaunchListener(new ILaunchesListener2() {
+				@Override
+				public void launchesRemoved(ILaunch[] launches) {}
+				
+				@Override
+				public void launchesChanged(ILaunch[] launches) {}
+				
+				@Override
+				public void launchesAdded(ILaunch[] launches) {}
+				
+				@Override
+				public void launchesTerminated(ILaunch[] launches) {
+					// Set the global scoping after the workflow ends
+					if (Arrays.stream(launches).anyMatch(l -> l == launch)) {
+						try {
+							ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
+									.refreshLocal(IResource.DEPTH_INFINITE, null);
+							ResourcesPlugin.getWorkspace().getRoot().getProject(projectName + ".ide")
+									.refreshLocal(IResource.DEPTH_INFINITE, null);
+							ResourcesPlugin.getWorkspace().getRoot().getProject(projectName + ".ui")
+									.refreshLocal(IResource.DEPTH_INFINITE, null);
+						} catch (CoreException e) {
+							e.printStackTrace();
+						}
+						DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
+						semaphore.release();
 					}
-					DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
-					semaphore.release();
 				}
+			});
+			DebugPlugin.getDefault().getLaunchManager().addLaunch(launch);
+			
+			try {
+				semaphore.acquire();
+				IFile pluginFile = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
+						.getFile("/plugin.xml");
+				List<String> lines = new BufferedReader(new InputStreamReader(pluginFile.getContents()))
+						.lines().collect(Collectors.toList());
+				String uppedLanguageName = languageName.substring(0, 1).toUpperCase()
+						+ languageName.substring(1);
+				lines.add(lines.size() - 1,
+						"  <extension\n" + 
+						"        point=\"org.eclipse.xtext.setup\">\n" + 
+						"     <setup\n" + 
+						"           class=\"" + projectName + "." + uppedLanguageName + "StandaloneSetup\"\n" + 
+						"           languageName=\"" + uppedLanguageName + "\">\n" + 
+						"     </setup>\n" + 
+						"  </extension>");
+				pluginFile.setContents(new ByteArrayInputStream(lines.stream().collect(Collectors.joining("\n"))
+						.getBytes()), true, false, null);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		});
-		try {
-			semaphore.acquire();
-		} catch (InterruptedException e) {
+		} catch (CoreException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return null;
 		}
+
 		return URI.createURI("platform:/resource/" + projectName + "/model/generated/"
 				+ languageName.substring(0, 1).toUpperCase() + languageName.substring(1) + ".ecore");
 	}
